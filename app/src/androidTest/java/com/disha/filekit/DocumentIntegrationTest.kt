@@ -19,6 +19,7 @@ class DocumentIntegrationTest {
     private val context get() = instrumentation.targetContext
     private fun grant(uri: android.net.Uri): android.net.Uri {
         // عملية الاختبارات بتشتغل بهوية التطبيق؛ منح الصلاحية لازم يحصل من مالك المزود نفسه.
+        if (context.checkUriPermission(uri, android.os.Process.myPid(), android.os.Process.myUid(), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) == android.content.pm.PackageManager.PERMISSION_GRANTED) return uri
         context.startActivity(Intent().setClassName("com.disha.filekit.test", "com.disha.filekit.GrantTestUriActivity")
             .putExtra("uri", uri.toString()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         val end = System.currentTimeMillis() + 10000
