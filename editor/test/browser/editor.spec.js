@@ -10,6 +10,7 @@ test('Arabic phone layout, editing, undo, redo and save payload',async({page})=>
  await expect(page.locator('html')).toHaveAttribute('dir','rtl');
  await expect(page.locator('#filename')).toHaveText('sample.json');
  await expect(page.locator('.cm-lineNumbers')).toBeVisible();
+ await page.screenshot({path:'test-results/editor-phone.png'});
  await page.locator('.cm-content').click();await page.keyboard.press('Control+End');await page.keyboard.type(' ');
  await expect(page.locator('#dirty')).toContainText('مش محفوظ');
  await page.locator('#undo').click();await expect(page.locator('#dirty')).toHaveText('محفوظ');

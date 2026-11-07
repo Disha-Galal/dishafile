@@ -41,7 +41,12 @@ object TextCodec {
         if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz") || lower.endsWith(".tar")) throw FileProblem("archive")
         val source = PushbackInputStream(input, 2)
         val magic = ByteArray(2)
-        val n = source.read(magic)
+        var n = 0
+        while (n < 2) {
+            val value = source.read()
+            if (value < 0) break
+            magic[n++] = value.toByte()
+        }
         if (n > 0) source.unread(magic, 0, n)
         val gzip = n == 2 && magic[0] == 0x1f.toByte() && magic[1] == 0x8b.toByte()
         if (lower.endsWith(".gz") && !gzip) throw FileProblem("gzip")

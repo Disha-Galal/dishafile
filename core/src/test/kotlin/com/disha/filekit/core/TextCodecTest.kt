@@ -39,6 +39,13 @@ class TextCodecTest {
         assertArrayEquals(String(bytes).replace("أهلا", "ديشا").toByteArray(), GZIPInputStream(output.inputStream()).readBytes())
         assertTrue(open(gzip(bytes), "config.json").gzip)
     }
+    @Test fun gzipMagicWorksWithShortProviderReads() {
+        val bytes = gzip("{\"ok\":true}".toByteArray())
+        val stream = object : java.io.ByteArrayInputStream(bytes) {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int = super.read(buffer, offset, minOf(1, length))
+        }
+        assertTrue(TextCodec.open(stream, "config.json.gz").gzip)
+    }
     @Test fun plainTextNamedGzipIsRejected() { fails("gzip") { open("hello".toByteArray(), "bad.gz") } }
     @Test fun gzipCorruptTruncatedConcatenatedAndTrailingAreRejected() {
         val valid = gzip("select 1;".toByteArray())

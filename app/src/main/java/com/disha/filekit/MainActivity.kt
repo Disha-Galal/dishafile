@@ -113,7 +113,14 @@ class MainActivity : ComponentActivity() {
         pendingIntent = if (savedInstanceState == null) intent else null
         web.loadUrl("$ORIGIN/assets/editor/index.html")
     }
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (ready) handleIntent(intent) else pendingIntent = intent }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent); setIntent(intent)
+        if (!ready) { pendingIntent = intent; return }
+        web.evaluateJavascript("JSON.stringify(window.Disha.snapshot())") { value ->
+            try { val raw = JSONTokener(value).nextValue(); if (raw is String && raw != "null") updateSnapshot(JSONObject(raw)) } catch (_: Exception) { }
+            if (!busy) handleIntent(intent) else notice(tr("استنى العملية الحالية تخلص وبعدين افتح الملف.", "Wait for the current operation, then open the file."))
+        }
+    }
     override fun onPause() { if (ready) emit(JSONObject().put("type", "flush")); super.onPause() }
     override fun onDestroy() { web.destroy(); io.shutdown(); super.onDestroy() }
 
@@ -292,10 +299,12 @@ class MainActivity : ComponentActivity() {
             }.show()
     }
     private fun recover() {
-        background({ store.recoveryDir.listFiles()?.filter { it.extension in setOf("json", "meta") }?.sortedByDescending { it.lastModified() } ?: emptyList() }) { files ->
+        background({ store.recoveryDir.listFiles()?.filter { it.extension in setOf("json", "meta") }?.sortedByDescending { it.lastModified() }?.map { file ->
+            file to runCatching { JSONObject(file.readText()).optString("name") }.getOrDefault(file.name)
+        } ?: emptyList() }) { entries ->
+            val files = entries.map { it.first }
             if (files.isEmpty()) { notice(tr("مفيش مسودات أو نسخ أمان.", "No recovery drafts or backups.")); return@background }
-            val labels = files.map { file ->
-                val name = runCatching { JSONObject(file.readText()).optString("name") }.getOrDefault(file.name)
+            val labels = entries.map { (file, name) ->
                 "${if (file.extension == "meta") tr("الأصل", "Original") else tr("مسودة", "Draft")}: $name · ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(file.lastModified()))}"
             }.toTypedArray()
             AlertDialog.Builder(this).setTitle(tr("استرجاع — الحفظ باسم جديد", "Recover — save to a new file")).setItems(labels) { _, index ->

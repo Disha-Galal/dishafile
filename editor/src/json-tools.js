@@ -2,7 +2,7 @@ import {parseTree, printParseErrorCode} from 'jsonc-parser';
 export function validateJson(text, jsonl = false) {
   if (jsonl) {
     const lines = text.split('\n');
-    if (lines.at(-1) === '') lines.pop();
+    if (lines[lines.length-1] === '') lines.pop();
     if (!lines.length) return {ok:false,line:1,column:1,error:'ValueExpected'};
     for (let i=0;i<lines.length;i++) {
       const result = validateJson(lines[i]);
