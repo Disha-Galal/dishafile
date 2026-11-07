@@ -1,0 +1,12 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+node_modules/
+editor/test-results/
+editor/playwright-report/
+*.jks
+*.keystore
+*.apk
+.DS_Store
+.tools/

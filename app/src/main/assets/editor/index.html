@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Disha FileKit</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="brand">▤ <b>Disha FileKit</b><small data-i18n="offline"></small></div><button id="menuButton" aria-label="Menu">☰</button></header>
+<main id="home">
+  <div class="hero-icon">{ }</div><h1 data-i18n="welcome"></h1><p data-i18n="intro"></p>
+  <button class="primary big" id="openHome" data-i18n="open"></button><button class="big" id="newHome" data-i18n="new"></button>
+  <button id="recoverHome" class="big" data-i18n="recover"></button>
+  <h2 data-i18n="recent"></h2><div id="recents"></div><p class="hint" data-i18n="formats"></p>
+</main>
+<section id="workspace" hidden>
+  <div id="documentBar"><div><strong id="filename" dir="auto"></strong><small id="metadata"></small></div><span id="dirty" role="status"></span></div>
+  <div id="tools"><button id="undo" data-i18n="undo"></button><button id="redo" data-i18n="redo"></button><button id="wrap" data-i18n="wrap"></button><button id="smaller" aria-label="Smaller font">A−</button><button id="larger" aria-label="Larger font">A+</button></div>
+  <div id="editor" dir="ltr"></div>
+  <nav id="actions"><button id="copy" data-i18n="copy"></button><button id="find" data-i18n="find"></button><button id="format" data-i18n="format"></button><button id="save" class="primary" data-i18n="save"></button><button id="saveAs" data-i18n="saveAs"></button></nav>
+</section>
+<div id="message" role="status" aria-live="polite"></div>
+<dialog id="menu"><h2 data-i18n="options"></h2><button id="openMenu" data-i18n="open"></button><button id="newMenu" data-i18n="new"></button><button id="homeMenu" data-i18n="home"></button><button id="share" data-i18n="share"></button><button id="validate" data-i18n="validate"></button><button id="encoding" data-i18n="encoding"></button><button id="theme" data-i18n="theme"></button><button id="language">English / عربي</button><button id="closeMenu" data-i18n="close"></button></dialog>
+<dialog id="formatDialog"><h2 data-i18n="format"></h2><p data-i18n="formatWarning"></p><button id="indent2">2 spaces</button><button id="indent4">4 spaces</button><button id="minify" data-i18n="minify"></button><button id="closeFormat" data-i18n="cancel"></button></dialog>
+<script src="editor.js"></script>
+</body></html>

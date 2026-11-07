@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'./test/browser',use:{baseURL:'http://127.0.0.1:4173',viewport:{width:393,height:780},launchOptions:{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||undefined,args:process.env.DISHA_PROOT ? ['--no-sandbox','--no-zygote','--single-process','--disable-gpu','--disable-software-rasterizer'] : ['--no-sandbox']}},webServer:{command:'npm run serve',url:'http://127.0.0.1:4173',reuseExistingServer:true},reporter:'list'});
