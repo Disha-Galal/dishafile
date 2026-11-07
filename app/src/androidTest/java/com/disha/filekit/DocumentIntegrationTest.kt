@@ -17,15 +17,24 @@ import java.util.concurrent.TimeUnit
 class DocumentIntegrationTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
-    private fun uri(id: String) = DocumentsContract.buildDocumentUri("com.disha.filekit.test.documents", id).also {
-        instrumentation.context.grantUriPermission(context.packageName,it,Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+    private fun grant(uri: android.net.Uri): android.net.Uri {
+        // عملية الاختبارات بتشتغل بهوية التطبيق؛ منح الصلاحية لازم يحصل من مالك المزود نفسه.
+        context.startActivity(Intent().setClassName("com.disha.filekit.test", "com.disha.filekit.GrantTestUriActivity")
+            .putExtra("uri", uri.toString()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val end = System.currentTimeMillis() + 10000
+        while (System.currentTimeMillis() < end) {
+            if (context.checkUriPermission(uri, android.os.Process.myPid(), android.os.Process.myUid(), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) == android.content.pm.PackageManager.PERMISSION_GRANTED) return uri
+            Thread.sleep(100)
+        }
+        throw AssertionError("Test provider did not grant URI: $uri")
     }
+    private fun uri(id: String) = grant(DocumentsContract.buildDocumentUri("com.disha.filekit.test.documents", id))
     @Test fun contentUriRoundTripTruncatesAndReadOnlyProviderIsDetected() {
         val store=DocumentStore(context)
         val source=uri("sample.json")
         val root=uri("root")
-        val created=DocumentsContract.createDocument(instrumentation.context.contentResolver,root,"application/json","copy.json")!!
-        instrumentation.context.grantUriPermission(context.packageName,created,Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        val created=DocumentsContract.createDocument(context.contentResolver,root,"application/json","copy.json")!!
+        grant(created)
         val original=store.read(source,"sample.json")
         assertEquals("CRLF",original.newline)
         store.write(created,TextCodec.encode(original))

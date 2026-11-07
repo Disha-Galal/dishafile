@@ -6,7 +6,7 @@ This project By Gogo & Disha ®
 
 ## تاخد الـ APK من موبايلك
 
-1. افتح الريبو على GitHub، وبعدها تبويب **Actions → Android APK**.
+1. افتح [الريبو](https://github.com/Disha-Galal/dishafile)، وبعدها [Actions → Android APK](https://github.com/Disha-Galal/dishafile/actions/workflows/android-apk.yml).
 2. افتح آخر تشغيل أخضر مطابق لآخر commit. لو محتاج تشغيل جديد اختار **Run workflow**.
 3. تحت **Artifacts** نزّل **Disha-FileKit-debug-APK** وفك ملف ZIP.
 4. افتح `app-debug.apk`، واسمح بالتثبيت من المتصفح أو مدير الملفات لما أندرويد يطلب.
@@ -39,6 +39,7 @@ This project By Gogo & Disha ®
 على **Ubuntu داخل Termux PRoot ARM64** تقدر تعدّل السورس وتشغّل اختبارات Java/JS. بناء APK الرسمي في GitHub Actions على Ubuntu x86_64، مش على ARM64. المطلوب للاختبارات المحلية: JDK 17 وNode 22 وPython 3 لسيرفر اختبار المتصفح فقط.
 
 ```bash
+git clone https://github.com/Disha-Galal/dishafile.git disha-filekit
 cd disha-filekit/editor
 npm ci
 npm run build
@@ -49,7 +50,7 @@ cd ..
 ./gradlew -PcoreOnly :core:test
 ```
 
-اختبارات المتصفح ممكن تحتاج مكتبات Linux إضافية. `JAVA_HOME` لازم يشاور على JDK 17. مفيش Python أو Node أو سيرفر داخل APK.
+اختبارات Chromium هنا واجهت مشكلة تشغيل داخل PRoot قبل فتح الصفحة؛ اختبارات المتصفح الكاملة بتشتغل على GitHub Ubuntu. لو نفس المشكلة ظهرت عندك، استخدم Actions بدل ما تعتمد على محاكي جوه الموبايل. `JAVA_HOME` لازم يشاور على JDK 17. مفيش Python أو Node أو سيرفر داخل APK.
 
 أمر البناء على GitHub Ubuntu بعد تثبيت SDK:
 

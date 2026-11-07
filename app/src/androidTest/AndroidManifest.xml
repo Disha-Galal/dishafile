@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <activity android:name="com.disha.filekit.GrantTestUriActivity" android:exported="true" />
         <provider android:name="com.disha.filekit.TestDocumentsProvider"
             android:authorities="com.disha.filekit.test.documents"
             android:exported="true" android:grantUriPermissions="true"

@@ -46,7 +46,7 @@ test('search replace and theme/language controls work',async({page})=>{
  await load(page,'notes.txt','hello hello');await page.locator('#find').click();
  await expect(page.locator('.cm-search')).toBeVisible();
  await page.locator('input[name=search]').fill('hello');await page.locator('input[name=replace]').fill('أهلا');
- await page.getByRole('button',{name:'replace all',exact:true}).click();
+ await page.locator('button[name=replaceAll]').click();
  expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('أهلا أهلا');
  await page.locator('#menuButton').click();await page.locator('#language').click();await page.locator('#theme').click();await page.locator('#closeMenu').click();
  await expect(page.locator('html')).toHaveAttribute('lang','en');await expect(page.locator('body')).toHaveClass(/light/);

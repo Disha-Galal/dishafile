@@ -2,7 +2,9 @@ name: Android APK
 on:
   push:
     branches: [main, 'build/**']
+    paths-ignore: ['docs/**', 'README.md', 'CHANGELOG.md', 'LICENSE', 'AGENTS.md']
   pull_request:
+    paths-ignore: ['docs/**', 'README.md', 'CHANGELOG.md', 'LICENSE', 'AGENTS.md']
   workflow_dispatch:
 permissions:
   contents: read

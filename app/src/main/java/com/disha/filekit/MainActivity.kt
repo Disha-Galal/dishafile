@@ -11,7 +11,9 @@ import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.IntentCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewAssetLoader
@@ -52,6 +54,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         store = DocumentStore(this)
         lang = prefs.getString("lang", "ar") ?: "ar"
         val root = FrameLayout(this)
@@ -93,7 +96,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         // الجسر متاح للأصل المحلي والإطار الرئيسي فقط؛ نص الملف لا يدخل HTML أبدا.
-        WebViewCompat.addWebMessageListener(web, "Native", setOf(ORIGIN)) { _, message, source, main, _ ->
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) WebViewCompat.addWebMessageListener(web, "Native", setOf(ORIGIN)) { _, message, source, main, _ ->
             if (main && source.toString() == ORIGIN) {
                 val data = message.data
                 if (data != null && data.length <= 64 * 1024 * 1024) {
@@ -330,7 +333,7 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent) {
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> intent.getParcelableExtra(Intent.EXTRA_STREAM) ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java) ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
             else -> null
         }
         if (uri != null) { guard { loadUri(uri) }; return }
