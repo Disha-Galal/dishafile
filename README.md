@@ -7,7 +7,7 @@ This project By Gogo & Disha ®
 ## تاخد الـ APK من موبايلك
 
 1. افتح [الريبو](https://github.com/Disha-Galal/dishafile)، وبعدها [Actions → Android APK](https://github.com/Disha-Galal/dishafile/actions/workflows/android-apk.yml).
-2. افتح آخر تشغيل أخضر مطابق لآخر commit. لو محتاج تشغيل جديد اختار **Run workflow**.
+2. افتح آخر تشغيل أخضر مطابق لآخر تعديل في كود التطبيق؛ تعديلات التوثيق لوحدها مش بتعيد البناء. لو محتاج تشغيل جديد اختار **Run workflow**.
 3. تحت **Artifacts** نزّل **Disha-FileKit-debug-APK** وفك ملف ZIP.
 4. افتح `app-debug.apk`، واسمح بالتثبيت من المتصفح أو مدير الملفات لما أندرويد يطلب.
 5. محتاج Android 8 أو أحدث وAndroid System WebView حديث. مش محتاج كمبيوتر ولا Android Studio ولا Termux لتشغيل التطبيق.
