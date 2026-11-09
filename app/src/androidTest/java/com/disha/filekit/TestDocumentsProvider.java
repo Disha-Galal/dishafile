@@ -28,6 +28,12 @@ public final class TestDocumentsProvider extends DocumentsProvider {
     @Override public boolean onCreate() {
         write(new File(directory(), "readonly.txt"), "read-only عربي");
         write(new File(directory(), "sample.json"), "{\"message\":\"أهلا\"}\r\n");
+        try (java.io.InputStream input = getContext().getAssets().open("four-flows.tnet");
+             FileOutputStream output = new FileOutputStream(new File(directory(), "flows (2)"))) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        } catch (IOException error) { throw new IllegalStateException(error); }
         return true;
     }
     @Override public Cursor queryRoots(String[] projection) {
@@ -44,7 +50,7 @@ public final class TestDocumentsProvider extends DocumentsProvider {
     }
     private void addDocument(MatrixCursor cursor, String id) throws FileNotFoundException {
         if (id.equals("root")) cursor.addRow(new Object[]{id, "Test files", Document.MIME_TYPE_DIR, Document.FLAG_DIR_SUPPORTS_CREATE, 0});
-        else cursor.addRow(new Object[]{id, id, id.endsWith("json") ? "application/json" : "text/plain", id.equals("readonly.txt") ? 0 : Document.FLAG_SUPPORTS_WRITE, file(id).length()});
+        else cursor.addRow(new Object[]{id, id, id.endsWith("json") ? "application/json" : "text/plain", (id.equals("readonly.txt") || id.equals("flows (2)")) ? 0 : Document.FLAG_SUPPORTS_WRITE, file(id).length()});
     }
     @Override public Cursor queryDocument(String id, String[] projection) throws FileNotFoundException {
         MatrixCursor cursor = cursor(); addDocument(cursor, id); return cursor;
@@ -56,7 +62,7 @@ public final class TestDocumentsProvider extends DocumentsProvider {
         return cursor;
     }
     @Override public ParcelFileDescriptor openDocument(String id, String mode, CancellationSignal signal) throws FileNotFoundException {
-        if (id.equals("readonly.txt") && !mode.equals("r")) throw new FileNotFoundException("Read-only provider");
+        if ((id.equals("readonly.txt") || id.equals("flows (2)")) && !mode.equals("r")) throw new FileNotFoundException("Read-only provider");
         return ParcelFileDescriptor.open(file(id), ParcelFileDescriptor.parseMode(mode));
     }
     @Override public String createDocument(String parentId, String mimeType, String displayName) throws FileNotFoundException {

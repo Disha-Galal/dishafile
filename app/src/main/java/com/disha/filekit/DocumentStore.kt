@@ -37,6 +37,20 @@ class DocumentStore(private val context: Context) {
     }
     fun read(uri: Uri, name: String, encoding: String? = null, preview: Boolean = false): TextFile =
         (resolver.openInputStream(uri) ?: throw FileProblem("permission")).use { TextCodec.open(it, name, encoding, preview) }
+    fun readFlow(uri: Uri, name: String): FlowDocument? =
+        (resolver.openInputStream(uri) ?: throw FileProblem("permission")).buffered().use { input ->
+            input.mark(32)
+            val prefix = ByteArray(16)
+            var count = 0
+            while (count < prefix.size) { val n = input.read(prefix, count, prefix.size - count); if (n < 0) break; if (n > 0) count += n }
+            input.reset()
+            if (!FlowTnetstringParser.candidate(prefix.copyOf(count), name)) null
+            else {
+                val bytes = try { TextCodec.readBounded(input, FlowTnetstringParser.FILE_LIMIT) }
+                    catch (e: FileProblem) { if (e.kind == "tooLarge") throw FileProblem("flowLimit") else throw e }
+                FlowTnetstringParser.parse(bytes)
+            }
+        }
     fun digest(uri: Uri): String = (resolver.openInputStream(uri) ?: throw FileProblem("permission")).use {
         hash(TextCodec.readBounded(it, TextCodec.SOURCE_LIMIT))
     }

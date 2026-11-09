@@ -15,6 +15,7 @@ import {yaml} from '@codemirror/lang-yaml';
 import {python} from '@codemirror/lang-python';
 import {shell} from '@codemirror/legacy-modes/mode/shell';
 import {properties} from '@codemirror/legacy-modes/mode/properties';
+import {createFlowViewer} from './flow-viewer.js';
 import {validateJson,formatJson} from './json-tools.js';
 
 const strings={
@@ -25,9 +26,10 @@ let lang='ar',dark=true,wrap=true,fontSize=15,current=null,savedText='',revision
 const phrasesSlot=new Compartment(),languageSlot=new Compartment(),themeSlot=new Compartment(),wrapSlot=new Compartment(),fontSlot=new Compartment();
 const $=id=>document.getElementById(id),t=key=>strings[lang][key]||key;
 const send=(action,data={})=>{if(current && ['open','new','home','recent','recover'].includes(action)) data={...snapshot(),...data};if(window.Native) window.Native.postMessage(JSON.stringify({action,...data})); else if(action!=='ready'&&action!=='draft'&&action!=='settings') notice(t('webOnly'));};
+const flowViewer=createFlowViewer(send);
 function notice(text){$('message').textContent=text;$('message').classList.toggle('visible',!!text);}
 function phrases(){return EditorState.phrases.of(lang==='ar'?{'Find':'بحث','Replace':'استبدال','next':'التالي','previous':'السابق','all':'الكل','match case':'مطابقة الحروف','regexp':'تعبير نمطي','by word':'كلمة كاملة','replace':'استبدل','replace all':'استبدل الكل','close':'إغلاق'}:{});}
-function setLanguage(value){lang=value==='en'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));$('indent2').textContent=lang==='ar'?'مسافتين':'2 spaces';$('indent4').textContent=lang==='ar'?'٤ مسافات':'4 spaces';view?.dispatch({effects:phrasesSlot.reconfigure(phrases())});status();}
+function setLanguage(value){flowViewer.language(value);lang=value==='en'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));$('indent2').textContent=lang==='ar'?'مسافتين':'2 spaces';$('indent4').textContent=lang==='ar'?'٤ مسافات':'4 spaces';view?.dispatch({effects:phrasesSlot.reconfigure(phrases())});status();}
 function settings(){send('settings',{lang,dark,wrap,fontSize});}
 function status(){if(!current)return;$('dirty').textContent=current.preview?t('preview'):view.state.doc.toString()===savedText?t('saved'):t('unsaved');}
 function language(name){const ext=name.toLowerCase().replace(/\.gz$/,'').split('.').pop();return ({json:json,jsonl:json,js:javascript,md:markdown,markdown:markdown,html:html,htm:html,css:css,sql:sql,xml:xml,yaml:yaml,yml:yaml,py:python,sh:()=>StreamLanguage.define(shell),ini:()=>StreamLanguage.define(properties),conf:()=>StreamLanguage.define(properties)})[ext]?.()||[];}
@@ -35,7 +37,7 @@ function font(){return EditorView.theme({'&':{fontSize:`${fontSize}px`},'.cm-con
 function snapshot(){return {text:view.state.doc.toString(),revision,docId:current.docId};}
 function draft(){if(current&&!current.preview&&view.state.doc.toString()!==savedText)send('draft',snapshot());}
 function load(doc){
- clearTimeout(draftTimer);current=doc;revision=0;savedText=doc.dirty?'\u0000':doc.text;view?.destroy();
+ flowViewer.reset();clearTimeout(draftTimer);current=doc;revision=0;savedText=doc.dirty?'\u0000':doc.text;view?.destroy();
  view=new EditorView({parent:$('editor'),state:EditorState.create({doc:doc.text,extensions:[phrasesSlot.of(phrases()),lineNumbers(),history(),drawSelection(),highlightActiveLine(),syntaxHighlighting(defaultHighlightStyle,{fallback:true}),languageSlot.of(language(doc.name)),search({top:true}),keymap.of([...defaultKeymap,...historyKeymap,...searchKeymap,indentWithTab]),themeSlot.of(dark?oneDark:[]),wrapSlot.of(wrap?EditorView.lineWrapping:[]),fontSlot.of(font()),EditorState.readOnly.of(!!doc.preview),EditorView.editable.of(!doc.preview),EditorState.transactionFilter.of(tr=>tr.newDoc.length>8*1024*1024?[]:tr),EditorView.updateListener.of(update=>{if(update.docChanged){revision++;status();clearTimeout(draftTimer);draftTimer=setTimeout(draft,700);}})]})});
  $('home').hidden=true;$('workspace').hidden=false;$('filename').textContent=doc.name;
  $('metadata').textContent=`${doc.encoding} · ${doc.newline}${doc.bom?' · BOM':''}${doc.gzip?' · GZIP':''}`;
@@ -63,12 +65,15 @@ bind('format',()=>$('formatDialog').showModal());bind('indent2',()=>format(2));b
 bind('language',()=>{setLanguage(lang==='ar'?'en':'ar');settings();});bind('theme',()=>{dark=!dark;toggleTheme();settings();});
 bind('wrap',()=>{wrap=!wrap;view?.dispatch({effects:wrapSlot.reconfigure(wrap?EditorView.lineWrapping:[])});$('wrap').setAttribute('aria-pressed',String(wrap));settings();});
 for(const [id,delta] of [['smaller',-1],['larger',1]])bind(id,()=>{fontSize=Math.max(11,Math.min(28,fontSize+delta));view?.dispatch({effects:fontSlot.reconfigure(font())});settings();});
-window.Disha={snapshot:()=>current?snapshot():null,receive(message){switch(message.type){
+window.Disha={snapshot:()=>current?snapshot():null,receive(message){
+ if(message.type==='flowLoad'){clearTimeout(draftTimer);current=null;view?.destroy();view=null;$('home').hidden=true;$('workspace').hidden=true;notice('');}
+ if(flowViewer.receive(message))return;
+ switch(message.type){
  case 'load':load(message);break;
  case 'saved':if(current?.docId===message.docId){savedText=message.text;Object.assign(current,{name:message.name,encoding:message.encoding,bom:message.bom,newline:message.newline,gzip:message.gzip});$('filename').textContent=message.name;$('metadata').textContent=`${current.encoding} · ${current.newline}${current.bom?' · BOM':''}${current.gzip?' · GZIP':''}`;view.dispatch({effects:languageSlot.reconfigure(language(message.name))});status();}break;
  case 'notice':notice(message.text);break;
  case 'busy':document.body.classList.toggle('busy',message.value);break;
- case 'home':clearTimeout(draftTimer);current=null;view?.destroy();view=null;$('home').hidden=false;$('workspace').hidden=true;notice('');break;
+ case 'home':flowViewer.reset();clearTimeout(draftTimer);current=null;view?.destroy();view=null;$('home').hidden=false;$('workspace').hidden=true;notice('');break;
  case 'settings':setLanguage(message.lang);dark=message.dark;wrap=message.wrap;fontSize=message.fontSize;toggleTheme();break;
  case 'recents':$('recents').replaceChildren();for(const item of message.items){const button=document.createElement('button');button.textContent=item.name;button.dir='auto';button.onclick=()=>send('recent',{uri:item.uri});$('recents').append(button);}break;
  case 'flush':draft();break;
