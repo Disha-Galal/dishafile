@@ -16,6 +16,7 @@ async function open(page,extra=[]){
 }
 test('inline values appear automatically with exact copy, empty values, filtering and hide toggle',async({page})=>{
  await open(page);
+ await page.screenshot({path:'test-results/flow-phone.png'});
  await expect(page.locator('#flowRows')).toContainText('demo@example.test');await expect(page.locator('#flowRows')).toContainText('sample123');
  const empty=page.locator('.flow-row').filter({has:page.locator('strong',{hasText:/^empty$/})});await expect(empty.locator('.flow-value')).toHaveText('');
  const password=page.locator('.flow-row').filter({has:page.locator('strong',{hasText:/^password$/})});
@@ -45,4 +46,16 @@ test('large result sets page, stale details ignored and text editor still loads'
  await page.locator('#flowSearch').fill('عربي 349');await expect(page.locator('.flow-row')).toHaveCount(1);
  await page.evaluate(()=>Disha.receive({type:'flowDetail',flowId:'old-file',index:0,rows:[],extracted:[],notices:[]}));await expect(page.locator('.flow-row')).toHaveCount(1);
  await page.evaluate(()=>Disha.receive({type:'load',docId:'txt',name:'test.txt',text:'أهلا',encoding:'UTF-8',newline:'LF'}));await expect(page.locator('#flowViewer')).toBeHidden();await expect(page.locator('.cm-content')).toContainText('أهلا');
+});
+test('returning from Flow preserves text, JSONL, SQL, Markdown, HTML and gzip editor payloads',async({page})=>{
+ await open(page);
+ for(const [name,text,gzip] of [['notes.txt','عربي\ntext',false],['sample.json','{"n":0}',false],['sample.jsonl','{"a":1}\n{"a":2}\n',false],['sample.sql','SELECT 1;',false],['sample.md','# عنوان',false],['sample.html','<script>window.pwned=true</script>',false],['config.json.gz','{"gzip":true}',true]]){
+  await page.evaluate(doc=>Disha.receive(doc),{type:'load',docId:name,name,text,gzip,encoding:'UTF-8',newline:'LF',preview:false});
+  await expect(page.locator('#workspace')).toBeVisible();await expect(page.locator('#flowViewer')).toBeHidden();
+  expect(await page.evaluate(()=>Disha.snapshot().text)).toBe(text);
+  await page.locator('#saveAs').click();
+  expect(await page.evaluate(id=>nativeMessages.filter(m=>m.action==='saveAs'&&m.docId===id).at(-1).text,name)).toBe(text);
+  if(gzip)await expect(page.locator('#metadata')).toContainText('GZIP');
+ }
+ expect(await page.evaluate(()=>window.pwned)).toBeUndefined();
 });

@@ -99,8 +99,8 @@ object FlowTnetstringParser {
                 '}' -> FlowDict(buildList {
                     while (pos < stop) {
                         val key = read(stop, depth + 1) as? FlowBytes ?: throw FileProblem("flowInvalid")
-                        val text = try { key.text() } catch (_: Exception) { throw FileProblem("flowInvalid") }
                         if (key.size > 8192) throw FileProblem("flowLimit")
+                        val text = try { key.text() } catch (_: Exception) { throw FileProblem("flowInvalid") }
                         add(text to read(stop, depth + 1))
                     }
                 })

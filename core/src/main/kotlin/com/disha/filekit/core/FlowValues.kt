@@ -16,6 +16,7 @@ object FlowValues {
     const val PREVIEW_LIMIT = 64 * 1024
     const val ROW_LIMIT = 5000
     const val MATCH_LIMIT = 1000
+    const val VIEW_CHAR_LIMIT = 2 * 1024 * 1024
     private val secret = Regex("password|passwd|pwd|token|authorization|cookie|api[_-]?key|session", RegexOption.IGNORE_CASE)
     private val email = Regex("[A-Za-z0-9.!#\u0024%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9-]{1,63}(?:\\.[A-Za-z0-9-]{1,63})+")
     private val phone = Regex("(?<![\\w+])(?:\\+\\d[\\d ()-]{7,23}\\d|(?:\\+?20)?01[0125][0-9]{8})(?!\\w)")
@@ -24,8 +25,13 @@ object FlowValues {
     internal fun detail(record: FlowDict, index: Int): FlowDetail {
         val rows = mutableListOf<FlowRow>()
         val notes = mutableListOf<String>()
+        var displayChars = 0
+        var displayLimited = false
         fun add(section: String, group: String, key: String, value: String, type: String = "value", inheritedSecret: Boolean = false) {
-            if (rows.size < ROW_LIMIT) rows.add(FlowRow(section, group, key, value, "Flow #${index + 1} > $section > $group > $key", inheritedSecret || secret.containsMatchIn(key) || (key == "path" && secret.containsMatchIn(value)), type))
+            val cost = key.length.toLong() * 2 + value.length + section.length + group.length + 64
+            if (rows.size >= ROW_LIMIT || displayChars + cost > VIEW_CHAR_LIMIT) { displayLimited = true; return }
+            displayChars += cost.toInt()
+            rows.add(FlowRow(section, group, key, value, "Flow #${index + 1} > $section > $group > $key", inheritedSecret || secret.containsMatchIn(key) || (key == "path" && secret.containsMatchIn(value)), type))
         }
         for ((key, value) in record.entries) if (key !in setOf("request", "response")) {
             if (value !is FlowDict && value !is List<*>) add("Overview", "Metadata", key, value.flowText())
@@ -44,6 +50,7 @@ object FlowValues {
                 for (item in list) {
                     val pair = item as? List<*> ?: throw FileProblem("flowInvalid")
                     if (pair.size != 2 || pair.any { it !is FlowBytes }) throw FileProblem("flowInvalid")
+                    if ((pair[0] as FlowBytes).size > 8192 || (pair[1] as FlowBytes).size > 64 * 1024) throw FileProblem("flowLimit")
                     val key = pair[0].flowText()
                     val value = pair[1].flowText()
                     if (key.length > 8192 || value.length > 64 * 1024) throw FileProblem("flowLimit")
@@ -93,14 +100,21 @@ object FlowValues {
                 add(section, "Body", "binary", "Binary, ${body.size} bytes · Hex preview: $hex", "binary")
             }
         }
-        if (rows.size >= ROW_LIMIT) notes.add("تم بلوغ حد الصفوف / Row limit reached: $ROW_LIMIT")
+        if (displayLimited) notes.add("تم بلوغ حد العرض / Display limit reached: $ROW_LIMIT rows or $VIEW_CHAR_LIMIT characters; some rows omitted")
         val extracted = mutableListOf<FlowRow>()
         val seen = mutableSetOf<String>()
         var matches = 0
+        var extractChars = 0
+        var extractLimited = false
+        fun extract(row: FlowRow): Boolean {
+            val cost = row.key.length.toLong() + row.value.length + row.source.length
+            if (extracted.size >= ROW_LIMIT || extractChars + cost > VIEW_CHAR_LIMIT) { extractLimited = true; return false }
+            extractChars += cost.toInt(); extracted.add(row); return true
+        }
         for (row in rows) {
             if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException()
             if (row.type != "text" && row.type != "binary") {
-                if (extracted.size < ROW_LIMIT) extracted.add(row)
+                if (!extract(row)) break
             }
             if (row.type == "binary") continue
             for ((type, pattern) in listOf("email" to email, "phone" to phone, "url" to url)) {
@@ -110,12 +124,12 @@ object FlowValues {
                     val digits = value.count { it.isDigit() }
                     if (type == "phone" && digits !in 10..15) continue
                     if (!seen.add("${row.source}|$type|$value")) continue
+                    if (!extract(row.copy(key = type, value = value, type = type))) break
                     matches++
-                    extracted.add(row.copy(key = type, value = value, type = type))
                 }
             }
         }
-        if (extracted.size >= ROW_LIMIT || matches >= MATCH_LIMIT) notes.add("نتائج الاستخراج محدودة / Extraction limit reached")
+        if (extractLimited || extracted.size >= ROW_LIMIT || matches >= MATCH_LIMIT) notes.add("نتائج الاستخراج محدودة / Extraction limit reached")
         return FlowDetail(index, rows, extracted, notes)
     }
     private fun parameter(header: String, key: String): String? = Regex("(?:^|;)\\s*${Regex.escape(key)}\\s*=\\s*(?:\"([^\"]*)\"|([^;\\s]*))", RegexOption.IGNORE_CASE)
@@ -199,6 +213,12 @@ private class JsonRows(val text: String) {
     private var pos = 0
     private var nodes = 0
     private val rows = mutableListOf<Pair<String, String>>()
+    private var rowChars = 0L
+    private fun row(path: String, value: String) {
+        rowChars += path.length.toLong() + value.length
+        if (rowChars > FlowValues.VIEW_CHAR_LIMIT) throw FileProblem("flowLimit")
+        rows.add(path to value)
+    }
     fun parse(): List<Pair<String, String>> { value("$", 0); whitespace(); if (pos != text.length) fail(); return rows }
     private fun fail(): Nothing = throw FileProblem("flowJson")
     private fun whitespace() { while (pos < text.length && text[pos] in " \r\n\t") pos++ }
@@ -228,13 +248,13 @@ private class JsonRows(val text: String) {
     }
     private fun value(path: String, depth: Int) {
         if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException()
-        if (depth > 48 || ++nodes > FlowValues.ROW_LIMIT) throw FileProblem("flowLimit")
+        if (path.length > FlowValues.PREVIEW_LIMIT || depth > 48 || ++nodes > FlowValues.ROW_LIMIT) throw FileProblem("flowLimit")
         whitespace()
         if (pos >= text.length) fail()
         when (text[pos]) {
             '{' -> {
                 pos++
-                if (consume('}')) { rows.add(path to "{}"); return }
+                if (consume('}')) { row(path, "{}"); return }
                 do {
                     val key = string()
                     if (!consume(':')) fail()
@@ -245,18 +265,18 @@ private class JsonRows(val text: String) {
             }
             '[' -> {
                 pos++
-                if (consume(']')) { rows.add(path to "[]"); return }
+                if (consume(']')) { row(path, "[]"); return }
                 var index = 0
                 do { value("$path[${index++}]", depth + 1) } while (consume(','))
                 if (!consume(']')) fail()
             }
-            '"' -> rows.add(path to string())
+            '"' -> row(path, string())
             else -> {
                 val start = pos
                 while (pos < text.length && text[pos] !in " \r\n\t,]}") pos++
                 val token = text.substring(start, pos)
                 if (token !in listOf("null", "false", "true") && !token.matches(Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?"))) fail()
-                rows.add(path to token)
+                row(path, token)
             }
         }
     }

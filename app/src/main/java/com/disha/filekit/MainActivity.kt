@@ -268,6 +268,7 @@ class MainActivity : ComponentActivity() {
                     when (loaded) {
                         is FlowSession -> { displayFlow(loaded); addRecent(uri, loaded.name) }
                         is Session -> { display(loaded); addRecent(uri, loaded.name) }
+                        else -> error(FileProblem("io"))
                     }
                 }, { e ->
                     when ((e as? FileProblem)?.kind) {

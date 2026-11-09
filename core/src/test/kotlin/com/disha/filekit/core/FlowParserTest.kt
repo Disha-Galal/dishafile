@@ -116,6 +116,15 @@ class FlowParserTest {
             assertTrue(detail.rows.any { it.type == "binary" })
         }
     }
+    @Test fun displayAndExtractionBudgetsIncludeRepeatedSourcePaths() {
+        val record = tn(mapOf("type" to "tcp", "large" to "a".repeat(FlowValues.VIEW_CHAR_LIMIT + 1),
+            "k".repeat(8000) to (0 until 400).joinToString(" ") { "demo$it@example.test" }))
+        val detail = FlowTnetstringParser.parse(record).detail(0)
+        assertFalse(detail.rows.any { it.key == "large" })
+        assertTrue(detail.notices.any { it.contains("Display limit") })
+        assertTrue(detail.notices.any { it.contains("Extraction limit") })
+        assertTrue(detail.extracted.sumOf { it.key.length.toLong() + it.value.length + it.source.length } <= FlowValues.VIEW_CHAR_LIMIT)
+    }
     @Test fun largePreviewScannerAndMaliciousHeadersAreLimited() {
         val detail = FlowTnetstringParser.parse(flow("a".repeat(200000).toByteArray())).detail(0)
         assertEquals(FlowValues.PREVIEW_LIMIT, detail.rows.first { it.type == "text" }.value.length)
