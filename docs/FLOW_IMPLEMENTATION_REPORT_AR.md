@@ -25,7 +25,30 @@ This project By Gogo & Disha ®
 
 ## الاختبارات والنسخة التجريبية
 
-يجري تحديث هذا القسم بالنتائج النهائية وروابط artifacts بعد اكتمال تشغيل GitHub Actions المطابق للكود الأخير. تشغيل البناء الأول [42540057933](https://github.com/Disha-Galal/dishafile/actions/runs/42540057933) نجح في مرحلة البناء، واختباراته على Android 13 قيد المتابعة وقت كتابة المسودة؛ ليس هذا ادعاءً باكتمال التشغيل النهائي.
+اكتمل [تشغيل GitHub Actions النهائي 42540671614](https://github.com/Disha-Galal/dishafile/actions/runs/42540671614) **بنجاح** على Ubuntu x86_64، بما يشمل بناء APK وLint واختبارات Android 13 في وضع الطيران. مصدر APK هو commit [`a65ccd72417afcebcf06ab860d1358e5c335073b`](https://github.com/Disha-Galal/dishafile/commit/a65ccd72417afcebcf06ab860d1358e5c335073b). التعديلات اللاحقة له توثيق وأدلة فقط.
+
+| التحقق | النتيجة |
+|---|---|
+| JVM على JDK 17: المحلل والترميزات وGZIP | 28 ناجحًا |
+| JavaScript: JSON وJSONL | 6 ناجحة |
+| Chromium: المحرر وFlow والقيم التلقائية والبحث والنسخ والإخفاء والتصفح | 11 ناجحًا |
+| Android 13 / API 33: SAF وفتح Flow بلا امتداد وثبات الأصل وقراءة فقط واسترجاع | 6 ناجحة، وضع الطيران مؤكَّد |
+| المجموع | 51 اختبارًا ناجحًا |
+| Android Lint | 0 أخطاء، 19 تحذيرًا |
+| بناء Debug APK وAPK الاختبارات | ناجح |
+| مطابقة الأصول المبنية مع Git | ناجحة |
+
+الاختبارات المحلية نجحت أيضًا: `npm ci` و`npm run build` و`npm test` و`npx playwright install chromium` و`npm run test:browser` داخل `editor`، و`./gradlew -PcoreOnly :core:test` باستخدام JDK 17. بدأ تشغيل المتصفح المحلي قبل اكتمال التنزيل فرفض بسبب غياب الملف التنفيذي؛ بعد تثبيت الإصدار الصحيح اكتملت الاختبارات الـ11 بنجاح. بناء أندرويد النهائي والمحاكي نُفذا على GitHub، لا على ARM64 المحلي.
+
+- [تنزيل APK من Artifacts](https://github.com/Disha-Galal/dishafile/actions/runs/42540671614/artifacts/13641371684) — اسم الحزمة `Disha-FileKit-debug-APK`. الرابط ينزّل ZIP؛ يتطلب دخول GitHub، والاحتفاظ 30 يومًا.
+- الملف المثبَّت: `app-debug.apk`، الإصدار 1.1.0 / versionCode 2، الحجم **2,918,625 bytes**.
+- SHA-256: `5bbf185d1b5a91bd01b0963efb462389e2685e8dc88af5f9c15b1b20261e659c`.
+- [تقارير البناء والاختبارات](https://github.com/Disha-Galal/dishafile/actions/runs/42540671614/artifacts/13641476442)، و[نتيجة اختبارات المحاكي](validation/android-13-flow-instrumentation.txt)، و[تأكيد وضع الطيران](validation/flow-airplane-mode.txt).
+- فُحص AndroidManifest المجمّع داخل APK المُنزّل: minSdk 26 وtargetSdk 35، دون INTERNET أو صلاحيات تخزين شاملة؛ الموجود فقط إذن AndroidX داخلي من نوع signature.
+
+اختبار JVM الذهبي يفحص القيم `demo@example.test` و`sample123` كما هي، مع العربي والقيم الفارغة وتكرار `set-cookie` وJSON الدقيق. اختبار المتصفح يثبت ظهورها دون Analyze، والنسخ الصحيح والبحث والإخفاء وHTML غير النشط وعدم طلب شبكة من المحتوى. اختبار SAF يفتح fixture الفعلي عبر `ACTION_VIEW` من مزود مستقل، ويثبت أن أوامر الحفظ لا تصل إلى جلسة نص وأن hash الأصل بقي ثابتًا بعد الخروج. تُحفظ قواعد المسودات والنسخ الاحتياطية وكشف التعارض والكتابة المبتورة والتحقق بالقراءة في المسار النصي القائم.
+
+لقطة [عرض الهاتف](flow-phone.png) مأخوذة من Chromium في تشغيل GitHub Actions النهائي بحجم 393×780 باستخدام قيم صناعية، وليست صورة من هاتف فعلي.
 
 ## ما لم يُختبر على هاتف حقيقي
 
