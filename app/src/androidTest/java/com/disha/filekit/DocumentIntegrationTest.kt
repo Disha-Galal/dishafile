@@ -73,4 +73,33 @@ class DocumentIntegrationTest {
             assertTrue("ACTION_VIEW content URI must load Arabic text",loaded)
         }
     }
+    private fun waitForScript(scenario: ActivityScenario<MainActivity>, script: String): Boolean {
+        val end = System.currentTimeMillis() + 20000
+        while (System.currentTimeMillis() < end) {
+            val latch = CountDownLatch(1)
+            var result = false
+            scenario.onActivity { activity -> activity.web.evaluateJavascript(script) { result = it == "true"; latch.countDown() } }
+            assertTrue(latch.await(5, TimeUnit.SECONDS))
+            if (result) return true
+            Thread.sleep(150)
+        }
+        return false
+    }
+    @Test fun extensionlessFlowsOpenWithInlineValuesAndCannotOverwriteOriginal() {
+        val source = uri("flows (2)")
+        val store = DocumentStore(context)
+        val original = store.digest(source)
+        assertFalse(store.meta(source).writable)
+        val intent = Intent(context, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setDataAndType(source, "application/octet-stream")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+            assertTrue("SAF Flow must show actual values automatically", waitForScript(scenario,
+                "Boolean(document.querySelectorAll('.flow-summary').length===4 && document.querySelector('#flowRows').textContent.includes('demo@example.test') && document.querySelector('#flowRows').textContent.includes('sample123'))"))
+            assertTrue(waitForScript(scenario, "Boolean(document.querySelector('#workspace').hidden && Disha.snapshot()===null)"))
+            scenario.onActivity { activity -> activity.web.evaluateJavascript("Native.postMessage(JSON.stringify({action:'save'}));Native.postMessage(JSON.stringify({action:'saveAs'}));Native.postMessage(JSON.stringify({action:'home'}));", null) }
+            assertTrue(waitForScript(scenario, "Boolean(!document.querySelector('#home').hidden && document.querySelector('#flowRows').textContent==='')"))
+        }
+        assertEquals("Opening/closing Flow must preserve bytes", original, store.digest(source))
+    }
+
 }

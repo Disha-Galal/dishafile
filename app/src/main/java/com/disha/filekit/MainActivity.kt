@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 class MainActivity : ComponentActivity() {
     lateinit var web: WebView
@@ -39,6 +40,20 @@ class MainActivity : ComponentActivity() {
     private var pendingIntent: Intent? = null
     private var current: Session? = null
     private var pendingSave: Session? = null
+    private data class FlowSession(val id: String, val name: String, val uri: Uri, val document: FlowDocument)
+    private var flowSession: FlowSession? = null
+    private var flowExport: Pair<Uri, ByteArray>? = null
+    private var flowTask: Future<*>? = null
+    private var flowGeneration = 0
+    private val flowCache = linkedMapOf<Int, FlowDetail>()
+    private val createFlowExport = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val export = flowExport
+        flowExport = null
+        if (uri != null && export != null) {
+            if (uri == export.first) error(FileProblem("flowReadOnly"))
+            else background({ store.write(uri, export.second) }) { notice(tr("اتصدرت نسخة JSON واتراجعت.", "Exported and verified a new JSON copy.")) }
+        }
+    }
     private var lang = "ar"
     private data class Session(val id: String, var name: String, var file: TextFile, var uri: Uri? = null, var writable: Boolean = false, var hash: String = "", var savedText: String = "\u0000")
     private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -109,7 +124,7 @@ class MainActivity : ComponentActivity() {
                 if (busy) return
                 web.evaluateJavascript("JSON.stringify(window.Disha.snapshot())") { value ->
                     try { val raw = JSONTokener(value).nextValue(); if (raw is String && raw != "null") updateSnapshot(JSONObject(raw)) } catch (_: Exception) { }
-                    guard { if (current == null) finish() else showHome() }
+                    guard { if (current == null && flowSession == null) finish() else showHome() }
                 }
             }
         })
@@ -163,6 +178,35 @@ class MainActivity : ComponentActivity() {
             "home" -> guard { showHome() }
             "recent" -> guard { val uri = Uri.parse(message.getString("uri")); if (uri.scheme == "content") loadUri(uri) }
             "recover" -> guard { recover() }
+            "flowDetail" -> flowSession?.takeIf { it.id == message.optString("flowId") }?.let { session ->
+                val index = message.optInt("index", -1)
+                if (index in session.document.summaries.indices) {
+                    cancelFlowDetail()
+                    val generation = flowGeneration
+                    val cached = flowCache[index]
+                    flowTask = io.submit {
+                        val result = runCatching {
+                            val detail = cached ?: session.document.detail(index)
+                            detail to detailJson(detail).put("type", "flowDetail").put("flowId", session.id)
+                        }
+                        runOnUiThread {
+                            if (!isDestroyed && flowSession?.id == session.id && generation == flowGeneration) result.fold({ (detail, json) ->
+                                if (flowCache.size >= 2) flowCache.remove(flowCache.keys.first())
+                                flowCache[index] = detail
+                                emit(json)
+                            }, ::error)
+                        }
+                    }
+                }
+            }
+            "flowExport" -> flowSession?.takeIf { it.id == message.optString("flowId") }?.let { session ->
+                val index = message.optInt("index", -1)
+                if (index in session.document.summaries.indices) background({
+                    val json = detailJson(session.document.detail(index)).put("name", session.name)
+                        .put("credit", "This project By Gogo & Disha ®").put("scope", "Selected flow; bounded decoded rows and previews, not a lossless flow dump")
+                    json.toString(2).toByteArray(Charsets.UTF_8).also { if (it.size > TextCodec.EDIT_LIMIT) throw FileProblem("tooLarge") }
+                }) { bytes -> flowExport = session.uri to bytes; createFlowExport.launch("${safeName(session.name)}-flow-${index + 1}.json") }
+            }
             "draft" -> Unit
             "copy" -> (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Disha FileKit", message.getString("text")))
             "save" -> current?.takeUnless { it.file.preview }?.let { save(it.copy()) }
@@ -191,7 +235,7 @@ class MainActivity : ComponentActivity() {
                 }.show()
         } else next()
     }
-    private fun showHome() { current = null; emit(JSONObject().put("type", "home")); recentList() }
+    private fun showHome() { clearFlow(); current = null; emit(JSONObject().put("type", "home")); recentList() }
     private fun newFile() {
         val input = EditText(this).apply { setText("untitled.txt"); selectAll(); isSingleLine = true }
         AlertDialog.Builder(this).setTitle(tr("اسم الملف (مثال: notes.md)", "Filename (e.g. notes.md)" )).setView(input)
@@ -204,10 +248,13 @@ class MainActivity : ComponentActivity() {
     }
     private fun loadUri(uri: Uri, encoding: String? = null, preview: Boolean = false) {
         if (uri.scheme != "content") { error(FileProblem("permission")); return }
+        cancelFlowDetail()
         setBusy(true)
         io.execute {
             val result = runCatching {
                 val meta = store.meta(uri)
+                val flow = store.readFlow(uri, meta.name)
+                if (flow != null) return@runCatching FlowSession(UUID.randomUUID().toString(), meta.name, uri, flow)
                 if (!preview && meta.size > TextCodec.EDIT_LIMIT && !meta.name.endsWith(".gz", true)) throw FileProblem("tooLarge")
                 val before = if (preview) "" else store.digest(uri)
                 val file = store.read(uri, meta.name, encoding, preview)
@@ -217,7 +264,12 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
                 setBusy(false)
-                result.fold({ display(it); addRecent(uri, it.name) }, { e ->
+                result.fold({ loaded ->
+                    when (loaded) {
+                        is FlowSession -> { displayFlow(loaded); addRecent(uri, loaded.name) }
+                        is Session -> { display(loaded); addRecent(uri, loaded.name) }
+                    }
+                }, { e ->
                     when ((e as? FileProblem)?.kind) {
                         "encoding" -> AlertDialog.Builder(this).setMessage(tr("الترميز مش UTF-8 صالح. تفتحه صراحة بـ Windows-1256؟ راجع الحروف قبل الحفظ.", "Not valid UTF-8. Explicitly decode as Windows-1256? Review the characters before saving."))
                             .setNegativeButton(tr("إلغاء", "Cancel"), null).setPositiveButton("Windows-1256") { _, _ -> if (encoding == null) loadUri(uri, "windows-1256", preview) else error(e) }.show()
@@ -229,7 +281,26 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    private fun cancelFlowDetail() { flowGeneration++; flowTask?.cancel(true); flowTask = null }
+    private fun clearFlow() { cancelFlowDetail(); flowSession = null; flowCache.clear(); flowExport = null }
+    private fun displayFlow(session: FlowSession) {
+        clearFlow(); current = null; flowSession = session
+        val summaries = JSONArray()
+        session.document.summaries.forEach { item -> summaries.put(JSONObject().put("index", item.index).put("type", item.type)
+            .put("method", item.method).put("host", item.host).put("path", item.path).put("status", item.status)
+            .put("requestBytes", item.requestBytes).put("responseBytes", item.responseBytes).put("timestamp", item.timestamp)) }
+        emit(JSONObject().put("type", "flowLoad").put("flowId", session.id).put("name", session.name)
+            .put("size", session.document.sourceSize).put("summaries", summaries))
+    }
+    private fun detailJson(detail: FlowDetail): JSONObject {
+        fun rows(items: List<FlowRow>): JSONArray = JSONArray().also { output -> items.forEach { row ->
+            output.put(JSONObject().put("section", row.section).put("group", row.group).put("key", row.key).put("value", row.value)
+                .put("source", row.source).put("sensitive", row.sensitive).put("type", row.type))
+        } }
+        return JSONObject().put("index", detail.index).put("rows", rows(detail.rows)).put("extracted", rows(detail.extracted)).put("notices", JSONArray(detail.notices))
+    }
     private fun display(session: Session) {
+        clearFlow()
         current = session
         val file = session.file
         emit(JSONObject().put("type", "load").put("docId", session.id).put("name", session.name).put("text", file.text).put("encoding", file.encoding)
@@ -346,6 +417,9 @@ class MainActivity : ComponentActivity() {
     private fun error(error: Throwable) {
         val kind = (error as? FileProblem)?.kind ?: when (error) { is SecurityException -> "permission"; else -> "io" }
         val messages = mapOf(
+            "flowInvalid" to ("ملف Flow تالف أو ناقص أو بنيته غير صالحة. الأصل ما اتغيرش." to "Invalid or truncated Flow file. Original unchanged."),
+            "flowLimit" to ("ملف Flow تجاوز حدود الحجم أو التعقيد الآمنة." to "Flow file exceeds safe size or complexity limits."),
+            "flowReadOnly" to ("ملف Flow للقراءة فقط؛ اختار ملف جديد للتصدير." to "Flow files are read-only; choose a new export file."),
             "gzip" to ("ملف GZIP تالف أو متعدد الأعضاء. الأصل ما اتغيرش." to "Invalid, truncated or multi-member GZIP. Original unchanged."),
             "bomb" to ("فك الضغط تجاوز حد الأمان 32 MiB." to "Decompression exceeds the 32 MiB safety limit."),
             "archive" to ("أرشيف TAR متعدد الملفات مش مدعوم في النسخة دي." to "Multi-file TAR archives are not supported in v1."),

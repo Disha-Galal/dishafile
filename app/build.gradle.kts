@@ -18,6 +18,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    sourceSets.getByName("androidTest").assets.srcDir("../core/src/test/resources")
     buildTypes { release { isMinifyEnabled = false } }
     lint { abortOnError = true }
 }
