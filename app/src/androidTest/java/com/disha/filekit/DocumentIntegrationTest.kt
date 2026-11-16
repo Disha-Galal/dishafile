@@ -38,13 +38,19 @@ class DocumentIntegrationTest {
         grant(created)
         val original=store.read(source,"sample.json")
         assertEquals("CRLF",original.newline)
-        store.write(created,TextCodec.encode(original))
+        store.writeNew(created,TextCodec.encode(original))
+        try { store.writeNew(created,"unexpected".toByteArray()); fail("Existing documents must not be replaced implicitly") }
+        catch (e: FileProblem) { assertEquals("exists",e.kind) }
         assertEquals(original.text,store.read(created,"copy.json").text)
         store.write(created,"{}".toByteArray())
         assertEquals("{}",store.read(created,"copy.json").text)
         val readOnly=uri("readonly.txt")
         assertFalse(store.meta(readOnly).writable)
         assertEquals("read-only عربي",store.read(readOnly,"readonly.txt").text)
+        for (name in listOf("readonly.ts", "readonly.kt", "readonly.toml", "readonly.svg", "readonly.ndjson")) {
+            assertEquals("read-only عربي",store.read(readOnly,name).text)
+            assertFalse(store.meta(readOnly).writable)
+        }
     }
     @Test fun backupBeforeOverwriteAndConflictDetection() {
         val store=DocumentStore(context)

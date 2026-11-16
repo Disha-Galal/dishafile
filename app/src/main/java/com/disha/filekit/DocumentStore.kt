@@ -55,6 +55,11 @@ class DocumentStore(private val context: Context) {
         hash(TextCodec.readBounded(it, TextCodec.SOURCE_LIMIT))
     }
     fun hash(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    fun writeNew(uri: Uri, bytes: ByteArray) {
+        // مزود غير ملتزم قد يرجع مستندا موجودا من نافذة الإنشاء؛ نرفض استبداله ضمنيا.
+        (resolver.openInputStream(uri) ?: throw FileProblem("permission")).use { if (it.read() != -1) throw FileProblem("exists") }
+        write(uri, bytes)
+    }
     fun write(uri: Uri, bytes: ByteArray) {
         // وضع wt مطلوب لعدم ترك ذيل من الملف القديم؛ الفشل لا يتحول تلقائيا لوضع أضعف.
         (resolver.openOutputStream(uri, "wt") ?: throw FileProblem("readOnly")).use { it.write(bytes); it.flush() }

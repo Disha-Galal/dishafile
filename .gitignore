@@ -10,3 +10,8 @@ editor/playwright-report/
 *.apk
 .DS_Store
 .tools/
+
+.env
+.env.*
+!.env.example
+*.hprof

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <application android:label="Disha FileKit" android:theme="@style/AppTheme"
         android:icon="@drawable/ic_filekit" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="false" android:networkSecurityConfig="@xml/network_security_config">
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -22,6 +23,11 @@
                 <data android:mimeType="application/gzip" />
                 <data android:mimeType="application/x-gzip" />
                 <data android:mimeType="application/x-yaml" />
+                <data android:mimeType="application/toml" />
+                <data android:mimeType="application/x-ndjson" />
+                <data android:mimeType="application/ndjson" />
+                <data android:mimeType="application/typescript" />
+                <data android:mimeType="image/svg+xml" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -34,6 +40,11 @@
                 <data android:mimeType="application/gzip" />
                 <data android:mimeType="application/x-gzip" />
                 <data android:mimeType="application/x-yaml" />
+                <data android:mimeType="application/toml" />
+                <data android:mimeType="application/x-ndjson" />
+                <data android:mimeType="application/ndjson" />
+                <data android:mimeType="application/typescript" />
+                <data android:mimeType="image/svg+xml" />
             </intent-filter>
         </activity>
         <provider android:name="androidx.core.content.FileProvider"

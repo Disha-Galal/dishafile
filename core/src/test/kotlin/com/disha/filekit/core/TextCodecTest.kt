@@ -7,6 +7,18 @@ import java.util.zip.GZIPOutputStream
 import java.util.zip.GZIPInputStream
 
 class TextCodecTest {
+    @Test fun extendedTextFormatsPreserveArabicBomCrLfAndGzip() {
+        val bytes = byteArrayOf(0xef.toByte(), 0xbb.toByte(), 0xbf.toByte()) + "اسم = عربي 😀\r\nقيمة = 123\r\n".toByteArray()
+        val names = listOf("source.ts", "view.tsx", "app.kt", "build.kts", "main.java", "main.c", "main.cpp", "main.cs", "main.go", "main.rs", "main.rb", "project.toml", "app.properties", "script.ps1", "data.tsv", "events.ndjson", "image.svg", "captions.srt", "captions.vtt", ".env", "Dockerfile", ".gitignore", ".editorconfig", "script.bat", "module.mjs")
+        for (name in names) {
+            assertArrayEquals(name, bytes, TextCodec.encode(open(bytes, name)))
+            val compressed = gzip(bytes)
+            assertArrayEquals(name, bytes, GZIPInputStream(TextCodec.encode(open(compressed, "$name.gz")).inputStream()).readBytes())
+            fails("encoding") { open(byteArrayOf(0xc3.toByte(), 0x28), name) }
+            fails("binary") { open(byteArrayOf(0, 1, 2), name) }
+        }
+    }
+
     private fun gzip(bytes: ByteArray) = ByteArrayOutputStream().also { out -> GZIPOutputStream(out).use { it.write(bytes) } }.toByteArray()
     private fun open(bytes: ByteArray, name: String = "sample.txt", encoding: String? = null, preview: Boolean = false) = TextCodec.open(bytes.inputStream(), name, encoding, preview)
     private fun fails(kind: String, action: () -> Unit) {

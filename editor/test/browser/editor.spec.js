@@ -57,3 +57,51 @@ test('copy selection sends exact Unicode and navigation snapshots latest keystro
  await page.locator('#menuButton').click();await page.locator('#homeMenu').click();
  expect(await page.evaluate(()=>nativeMessages.find(m=>m.action==='home').text)).toBe('# عربي');
 });
+test('precise line selection, cursor controls and AI apply are undoable',async({page})=>{
+ await load(page,'main.ts','const x = 1;\nconst name = "عربي";\n');
+ await page.locator('#selectRange').click();await page.locator('#rangeFrom').fill('2');await page.locator('#rangeTo').fill('2');await page.locator('#rangeApply').click();
+ await page.locator('#copy').click();expect(await page.evaluate(()=>nativeMessages.find(m=>m.action==='copy').text)).toBe('const name = "عربي";');
+ await page.locator('#aiOpen').click();await page.locator('#aiInstruction').fill('Rewrite');await page.locator('#aiSend').click();
+ const request=await page.evaluate(()=>nativeMessages.find(m=>m.action==='aiRequest'));
+ expect(request.allowCloud).toBe(false);expect(request.content).toBe('const name = "عربي";');
+ await page.evaluate(id=>Disha.receive({type:'aiResult',requestId:id,model:'qwen',text:'const name = "ديشا";',failures:['llama']}),request.requestId);
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toContain('عربي');
+ await page.locator('#aiApply').click();expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('const x = 1;\nconst name = "ديشا";\n');
+ await page.locator('#undo').click();expect(await page.evaluate(()=>Disha.snapshot().text)).toContain('عربي');
+});
+test('AI output is inert and a stale suggestion cannot modify the document',async({page})=>{
+ await load(page,'test.html','<p>عربي</p>');await page.locator('#aiOpen').click();await page.locator('#aiInstruction').fill('Rewrite');await page.locator('#aiCloud').check();await page.locator('#aiSend').click();
+ await expect(page.locator('#aiCloud')).not.toBeChecked();expect(await page.evaluate(()=>nativeMessages.find(m=>m.action==='aiRequest').allowCloud)).toBe(true);
+ const id=await page.evaluate(()=>nativeMessages.find(m=>m.action==='aiRequest').requestId);
+ await page.evaluate(()=>{Disha.receive({type:'saved',docId:'test',name:'test.html',text:'<p>عربي</p>',encoding:'UTF-8',newline:'LF'});document.querySelector('#aiDialog').close();});
+ await page.locator('.cm-content').click();await page.keyboard.press('Control+End');await page.keyboard.type('changed');
+ await page.evaluate(id=>{Disha.receive({type:'aiResult',requestId:id,model:'llama',text:'<img src="https://evil.invalid" onerror="window.pwned=true">'});document.querySelector('#aiDialog').showModal();},id);
+ await expect(page.locator('#aiOutput img')).toHaveCount(0);await page.locator('#aiApply').click();
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toContain('changed');expect(await page.evaluate(()=>window.pwned)).toBeUndefined();
+});
+test('AI failures, cancellation and read-only previews never replace source',async({page})=>{
+ await load(page,'x.txt','preview',{preview:true});await page.locator('#aiOpen').click();await page.locator('#aiInstruction').fill('Explain');await page.locator('#aiSend').click();
+ const id=await page.evaluate(()=>nativeMessages.find(m=>m.action==='aiRequest').requestId);
+ await page.evaluate(id=>Disha.receive({type:'aiResult',requestId:id,model:'llama',text:'answer'}),id);
+ await expect(page.locator('#aiApply')).toBeDisabled();await page.locator('#aiSend').click();await page.locator('#aiClose').click();
+ expect(await page.evaluate(()=>nativeMessages.some(m=>m.action==='aiCancel'))).toBe(true);
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('preview');
+});
+for(const [name,text] of [['sample.ts','const اسم: string = "عربي";'],['sample.kt','val name: String = "عربي"'],['sample.toml','name = "عربي"'],['sample.rs','let name = "عربي";'],['sample.tsx','const view = <p>عربي</p>;']]){
+ test(`extended syntax highlighting preserves ${name}`,async({page})=>{
+  await load(page,name,text);await expect(page.locator('.cm-content .cm-line span').first()).toBeVisible();
+  expect(await page.evaluate(()=>Disha.snapshot().text)).toBe(text);
+ });
+}
+test('NDJSON validation reports the malformed record',async({page})=>{
+ await load(page,'events.ndjson','{"name":"عربي"}\n{"n": }');await page.locator('#menuButton').click();await page.locator('#validate').click();
+ await expect(page.locator('#message')).toContainText('2');
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('{"name":"عربي"}\n{"n": }');
+});
+test('AI refuses oversized Arabic context without silently truncating it',async({page})=>{
+ const source='ع'.repeat(4000);await load(page,'arabic.txt',source);
+ await page.locator('#aiOpen').click();await page.locator('#aiInstruction').fill('اشرح');await page.locator('#aiSend').click();
+ expect(await page.evaluate(()=>nativeMessages.some(m=>m.action==='aiRequest'))).toBe(false);
+ await expect(page.locator('#aiStatus')).toContainText('6000');
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toBe(source);
+});

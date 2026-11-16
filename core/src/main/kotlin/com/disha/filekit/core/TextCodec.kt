@@ -21,7 +21,7 @@ object TextCodec {
     const val INFLATE_LIMIT = 32 * 1024 * 1024
     const val SOURCE_LIMIT = 40 * 1024 * 1024
     const val PREVIEW_LIMIT = 256 * 1024
-    private val extensions = setOf("txt", "md", "markdown", "json", "jsonl", "sql", "html", "htm", "css", "js", "xml", "yaml", "yml", "log", "csv", "ini", "conf", "sh", "py")
+    private val extensions = setOf("txt", "md", "markdown", "json", "jsonl", "sql", "html", "htm", "css", "js", "xml", "yaml", "yml", "log", "csv", "ini", "conf", "sh", "py", "ts", "tsx", "jsx", "mjs", "cjs", "kt", "kts", "java", "c", "h", "cpp", "hpp", "cc", "cs", "go", "rs", "rb", "toml", "properties", "gradle", "bash", "zsh", "ps1", "bat", "cmd", "tsv", "ndjson", "svg", "srt", "vtt", "env", "cfg", "config", "dockerfile", "gitignore", "editorconfig")
 
     fun readBounded(input: InputStream, limit: Int): ByteArray {
         val out = ByteArrayOutputStream(minOf(limit, 8192))

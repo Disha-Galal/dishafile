@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
     lateinit var web: WebView
         private set
     private lateinit var store: DocumentStore
+    private lateinit var ai: AiController
     private val io = Executors.newSingleThreadExecutor()
     private val prefs by lazy { getSharedPreferences("ui", MODE_PRIVATE) }
     private var ready = false
@@ -51,7 +52,7 @@ class MainActivity : ComponentActivity() {
         flowExport = null
         if (uri != null && export != null) {
             if (uri == export.first) error(FileProblem("flowReadOnly"))
-            else background({ store.write(uri, export.second) }) { notice(tr("اتصدرت نسخة JSON واتراجعت.", "Exported and verified a new JSON copy.")) }
+            else background({ store.writeNew(uri, export.second) }) { notice(tr("اتصدرت نسخة JSON واتراجعت.", "Exported and verified a new JSON copy.")) }
         }
     }
     private var lang = "ar"
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         store = DocumentStore(this)
+        ai = AiController(this, ::emit) { lang == "en" }
         lang = prefs.getString("lang", "ar") ?: "ar"
         val root = FrameLayout(this)
         web = WebView(this)
@@ -140,7 +142,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     override fun onPause() { if (ready) emit(JSONObject().put("type", "flush")); super.onPause() }
-    override fun onDestroy() { web.destroy(); io.shutdown(); super.onDestroy() }
+    override fun onDestroy() { ai.destroy(); web.destroy(); io.shutdown(); super.onDestroy() }
 
     private fun emit(message: JSONObject) {
         if (isDestroyed || !ready) return
@@ -170,9 +172,12 @@ class MainActivity : ComponentActivity() {
             prefs.edit().putString("lang", lang).putBoolean("dark", message.optBoolean("dark", true)).putBoolean("wrap", message.optBoolean("wrap", true)).putInt("fontSize", message.optInt("fontSize", 15).coerceIn(11, 28)).apply()
             return
         }
+        if (action == "aiCancel") { ai.cancel(); return }
         if (busy && action != "draft") return
         if (message.has("docId")) updateSnapshot(message)
         when (action) {
+            "aiSettings" -> ai.configure()
+            "aiRequest" -> if (current?.id == message.optString("docId")) ai.request(message)
             "open" -> guard { openDocument.launch(arrayOf("*/*")) }
             "new" -> guard { newFile() }
             "home" -> guard { showHome() }
@@ -333,10 +338,11 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun writeCopy(uri: Uri, session: Session) {
+        if (uri == session.uri || uri == current?.uri) { error(FileProblem("exists")); return }
         background({
             store.draft(session.id, session.name, session.file)
             val bytes = TextCodec.encode(session.file)
-            store.write(uri, bytes)
+            store.writeNew(uri, bytes)
             store.persist(uri)
             store.meta(uri) to store.hash(bytes)
         }) { (meta, hash) -> saved(session, uri, meta.name, hash, meta.writable) }
@@ -418,6 +424,7 @@ class MainActivity : ComponentActivity() {
     private fun error(error: Throwable) {
         val kind = (error as? FileProblem)?.kind ?: when (error) { is SecurityException -> "permission"; else -> "io" }
         val messages = mapOf(
+            "exists" to ("المزود رجّع ملفًا موجودًا. اختار اسمًا جديدًا؛ الاستبدال يحتاج مسار الحفظ المؤكد." to "Provider returned an existing document. Choose a new name; replacement requires the confirmed Save flow."),
             "flowInvalid" to ("ملف Flow تالف أو ناقص أو بنيته غير صالحة. الأصل ما اتغيرش." to "Invalid or truncated Flow file. Original unchanged."),
             "flowLimit" to ("ملف Flow تجاوز حدود الحجم أو التعقيد الآمنة." to "Flow file exceeds safe size or complexity limits."),
             "flowReadOnly" to ("ملف Flow للقراءة فقط؛ اختار ملف جديد للتصدير." to "Flow files are read-only; choose a new export file."),

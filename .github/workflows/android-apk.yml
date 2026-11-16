@@ -52,6 +52,13 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Upload Markdown user guide
+        uses: actions/upload-artifact@v4
+        with:
+          name: Disha-FileKit-User-Guide
+          path: docs/USER_GUIDE.md
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
