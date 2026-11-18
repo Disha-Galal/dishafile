@@ -8,9 +8,20 @@ This project By Gogo & Disha ®
 - نجحت اختبارات JSON الستة و23 اختبار Chromium، بما فيها ترجمة Gemini المباشرة والمراجعة والتراجع وأمان النص.
 - نجح `scripts/setup-ubuntu.sh` محليًا مع JDK 17.0.21 وNode 22.22.1 وChromium. ملف البيئة المحلي `.tools/env.sh` لا يحتوي مفاتيح.
 - نجح فحص ترجمة Gemini فعليًا لعبارة Hello world باستخدام `gemini-3.1-flash-lite`، وأعاد نصًا عربيًا. النموذج القديم `gemini-2.5-flash` أعاد HTTP 404 في نفس الجولة، رغم ظهوره في قائمة المزود.
-- ظهر النموذجان المحليان في قائمة Ollama، لكن توليدهما فشل HTTP 500 بسبب غياب ملف `llama-server` من تثبيت الخدمة. إصلاح البيئة قيد التحقق؛ لا تعتبر قائمة الأوزان دليل توليد ناجح.
-- محاولة بناء أندرويد محليًا توقفت لغياب Android SDK. التعبئة الرسمية واختبار API 33 مطلوبان على GitHub Ubuntu x86_64؛ نتائج إصدار 1.2 أدناه لا تثبت النسخة الجديدة.
+- ظهر النموذجان المحليان في قائمة Ollama، لكن التثبيت القديم أعاد HTTP 500 لغياب `llama-server`. ثُبتت حزمة Ollama v0.40.16 الرسمية بعد التحقق من SHA-256، مع الاحتفاظ بالأوزان، وأعيد تشغيل الخدمة على `127.0.0.1:11434`. نجح عميل التطبيق الفعلي في توليد رد Qwen؛ جودة ترجمته العربية لم تكن موثوقة، وتجربة Llama تجاوزت مهلة 180 ثانية. Gemini هو المسار الموصى به للترجمة العربية في هذه البيئة؛ لا يوجد ادعاء بنجاح ترجمة Llama.
+- محاولة بناء أندرويد محليًا توقفت لغياب Android SDK؛ نجح البناء الرسمي على GitHub Ubuntu x86_64 في [التشغيل 44382522377](https://github.com/Disha-Galal/dishafile/actions/runs/44382522377). نجحت اختبارات API 33 العشرة في وضع الطيران: [سجل الاختبار](validation/android-13-ai-1.3-instrumentation.txt) و[وضع الطيران](validation/ai-1.3-airplane-mode.txt). المجموع: 81 اختبارًا ناجحًا. Lint: صفر أخطاء و20 تحذيرًا.
 - لم يُختبر التطبيق المحدّث على هاتف فعلي. [خطوات القبول](ACCEPTANCE.md) و[إعداد وتشخيص AI](AI_SETUP.md).
+
+مصدر APK: `7d61b98bd512b97080b7ec7ff93010e0bbba6291`، على فرع `build/ai-providers-1.3.0`، دون دمج تلقائي في main. التوثيق اللاحق لا يغير APK المبني.
+
+- [تنزيل APK إصدار 1.3.0](https://github.com/Disha-Galal/dishafile/actions/runs/44382522377/artifacts/14463609236) — فك ZIP ثم ثبّت app-debug.apk، versionCode 4، الحجم 2,976,220 بايت، الاحتفاظ حتى 2026-12-18.
+- [دليل Markdown من البناء](https://github.com/Disha-Galal/dishafile/actions/runs/44382522377/artifacts/14463334241).
+- [تقارير JVM وlint](https://github.com/Disha-Galal/dishafile/actions/runs/44382522377/artifacts/14463879061) و[أدلة محاكي API 33](https://github.com/Disha-Galal/dishafile/actions/runs/44382522377/artifacts/14463694479).
+
+SHA-256 للـ APK: `f344864b33d85b8873d9349499b377adbb8bd3ceaa5cd7fb42bc71d27cdf7224`.
+
+فُحص Manifest الثنائي: minSdk 26 وtargetSdk 35؛ INTERNET وصلاحية AndroidX الخاصة فقط، دون صلاحيات تخزين شامل. أصول المحرر داخل APK مطابقة للمصدر المتتبع. نجحت ترجمة Gemini أيضًا باستخدام عميل AiClient الفعلي المترجم إلى JVM، لا فحص Python وحده.
+
 
 ---
 

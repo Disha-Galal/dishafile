@@ -1,0 +1,10 @@
+
+com.disha.filekit.AiIntegrationTest:....
+com.disha.filekit.DocumentIntegrationTest:....
+com.disha.filekit.EditorSmokeTest:..
+
+Time: 10.546
+
+OK (10 tests)
+
+

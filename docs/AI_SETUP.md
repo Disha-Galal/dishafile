@@ -54,6 +54,14 @@ The 2026-11-18 investigation reproduced this exact failure for both installed mo
 
 Install the complete [official Linux distribution](https://docs.ollama.com/linux), including the bundled `lib/ollama` model runner and CPU libraries, in the Ubuntu environment that runs your service. Copying only the `ollama` executable is insufficient. Keep your existing model storage; do not delete or redownload weights to fix a missing runner. Restart the repaired service, run the translation check above, then use the same loopback port in Android settings.
 
+## Repair applied in this workspace (2026-11-18)
+
+The complete official Ollama v0.40.16 ARM64 package was downloaded and its SHA-256 verified (`e45b8e6dcb86cb9f3057396351655079c9a4879b4ced2678c9350d375dcbc224`). Its CPU runtime is installed under ignored `.tools/ollama/`; CUDA/Vulkan/ROCm bundles were excluded. The incomplete service was restarted with the repaired runtime on `http://127.0.0.1:11434`, retaining the existing model store and both model names. No model weights were downloaded or deleted.
+
+The local launcher is `.tools/start-ollama.sh`. If the service stops, run it in Ubuntu and keep the terminal alive. Do not start another service while port 11434 is already in use. `source .tools/env.sh` selects the local JDK, Node and repaired Ollama CLI for this shell; build setup and the runtime install are separate. The launcher and binaries are local generated files, not included in Git or the APK. After a fresh clone, install the complete official distribution as described above.
+
+The app's compiled `AiClient` successfully generated text with Qwen and Gemini. Gemini translated the test phrase correctly. Qwen's Arabic answer was unreliable, and the Llama test exceeded the 180-second deadline on this phone. Use direct Gemini for Arabic translation; local transport support does not guarantee a small model's translation quality or speed. No successful Llama translation or physical Android app test is claimed.
+
 ## Ubuntu x86_64 / GitHub Android build
 
 ```bash
