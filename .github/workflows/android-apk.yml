@@ -44,7 +44,7 @@ jobs:
       - name: Check generated assets match committed sources
         run: git diff --exit-code -- app/src/main/assets/editor
       - name: Test, lint and build APK
-        run: ./gradlew :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+        run: ./gradlew :core:test :ai:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -71,6 +71,7 @@ jobs:
           name: build-test-reports
           path: |
             core/build/reports/
+            ai/build/reports/
             app/build/reports/
             editor/test-results/
   android-13-smoke:

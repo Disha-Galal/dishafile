@@ -5,4 +5,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "DishaFileKit"
 include(":core")
+include(":ai")
 if (!providers.gradleProperty("coreOnly").isPresent) include(":app")

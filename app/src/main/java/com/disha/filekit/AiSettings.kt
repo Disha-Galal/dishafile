@@ -13,6 +13,7 @@ import javax.crypto.spec.GCMParameterSpec
 // المفتاح مشفر بمفتاح غير قابل للتصدير من مخزن أندرويد ولا يعبر جسر الويب.
 class AiSettings(context: Context) {
     private val prefs = context.getSharedPreferences("ai", Context.MODE_PRIVATE)
+    fun hasKey() = !prefs.getString("secret", "").isNullOrBlank()
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         return (store.getKey("filekit-gemini", null) as? SecretKey) ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
@@ -31,7 +32,7 @@ class AiSettings(context: Context) {
         }
         return AiClient.Config(prefs.getString("endpoint", "http://127.0.0.1:11434")!!,
             prefs.getString("primary", "llama3.2:3b")!!, prefs.getString("secondary", "qwen2.5:0.5b")!!,
-            prefs.getString("gemini", "gemini-2.5-flash")!!, decrypted)
+            prefs.getString("gemini", "gemini-3.1-flash-lite")!!, decrypted)
     }
     fun save(config: AiClient.Config, replacement: String, remove: Boolean) {
         com.disha.filekit.core.AiFallback.localEndpoint(config.endpoint)

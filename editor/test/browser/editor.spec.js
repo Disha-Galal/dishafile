@@ -105,3 +105,25 @@ test('AI refuses oversized Arabic context without silently truncating it',async(
  await expect(page.locator('#aiStatus')).toContainText('6000');
  expect(await page.evaluate(()=>Disha.snapshot().text)).toBe(source);
 });
+test('direct Gemini translation requests cloud explicitly and applies only after review',async({page})=>{
+ await load(page,'hello.txt','Hello world');await page.locator('#aiOpen').click();
+ await page.locator('#aiProvider').selectOption('gemini');await expect(page.locator('#aiCloud')).toBeDisabled();
+ await page.locator('#aiTranslate').click();await expect(page.locator('#aiInstruction')).toHaveValue(/Translate.*Arabic/);
+ expect(await page.evaluate(()=>nativeMessages.some(m=>m.action==='aiRequest'))).toBe(false);
+ await page.locator('#aiSend').click();
+ const request=await page.evaluate(()=>nativeMessages.find(m=>m.action==='aiRequest'));
+ expect(request.provider).toBe('gemini');expect(request.allowCloud).toBe(true);expect(request.content).toBe('Hello world');
+ await page.evaluate(id=>Disha.receive({type:'aiResult',requestId:id,model:'gemini-3.1-flash-lite',text:'مرحبًا بالعالم'}),request.requestId);
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('Hello world');
+ await page.locator('#aiApply').click();expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('مرحبًا بالعالم');
+ await page.locator('#undo').click();expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('Hello world');
+});
+test('provider errors leave text untouched and settings are accessible from AI',async({page})=>{
+ await load(page,'hello.txt','Hello world');await page.locator('#aiOpen').click();await page.locator('#aiTranslateLanguage').selectOption('English');
+ await page.locator('#aiTranslate').click();await expect(page.locator('#aiInstruction')).toHaveValue(/Translate.*English/);
+ await page.locator('#aiSend').click();const id=await page.evaluate(()=>nativeMessages.find(m=>m.action==='aiRequest').requestId);
+ await page.evaluate(requestId=>Disha.receive({type:'aiError',requestId,text:'Model unavailable. Choose and test a Gemini model in settings.'}),id);
+ await expect(page.locator('#aiStatus')).toContainText('Model unavailable');await expect(page.locator('#aiApply')).toBeDisabled();
+ expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('Hello world');
+ await page.locator('#aiConfigure').click();expect(await page.evaluate(()=>nativeMessages.some(m=>m.action==='aiSettings'))).toBe(true);
+});

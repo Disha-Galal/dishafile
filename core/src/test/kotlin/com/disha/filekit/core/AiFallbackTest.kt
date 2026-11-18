@@ -6,6 +6,14 @@ import java.io.IOException
 
 class AiFallbackTest {
     private val targets = listOf(AiFallback.Target("llama"), AiFallback.Target("qwen"), AiFallback.Target("gemini", true))
+    @Test fun directGeminiNeedsConsentAndKeyAndDoesNotWaitForLocalModels() {
+        assertEquals(listOf(AiFallback.Target("gemini", true)), AiFallback.targets("llama", "qwen", "gemini", "gemini", true, true))
+        for ((consent, key) in listOf(false to true, true to false)) {
+            try { AiFallback.targets("llama", "qwen", "gemini", "gemini", consent, key); fail() } catch (_: IllegalArgumentException) { }
+        }
+        assertEquals(targets.take(2), AiFallback.targets("llama", "qwen", "gemini", "ollama", false, true))
+        assertEquals(targets, AiFallback.targets("llama", "qwen", "gemini", "ollama", true, true))
+    }
     @Test fun localFailureSwitchesToSecondModel() {
         val calls = mutableListOf<String>()
         val result = AiFallback.generate(targets, false) { calls.add(it.model); if (it.model == "llama") throw IOException() else "عربي" }

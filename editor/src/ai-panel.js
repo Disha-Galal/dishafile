@@ -2,7 +2,7 @@
 export function createAiPanel({getView,getCurrent,getRevision,send,notice,isEnglish}) {
  const $=id=>document.getElementById(id),tr=(ar,en)=>isEnglish()?en:ar;
  let pending=null,result=null;
- function reset(){if(pending)send('aiCancel');pending=null;result=null;$('aiSend').disabled=false;$('aiApply').disabled=true;$('aiOutput').textContent='';$('aiStatus').textContent='';$('aiCloud').checked=false;}
+ function reset(){if(pending)send('aiCancel');pending=null;result=null;$('aiSend').disabled=false;$('aiApply').disabled=true;$('aiOutput').textContent='';$('aiStatus').textContent='';$('aiCloud').checked=false;$('aiProvider').value='ollama';$('aiCloud').disabled=false;}
  $('aiOpen').onclick=()=>{
   if(!getView())return;
   $('aiDialog').showModal();
@@ -10,6 +10,9 @@ export function createAiPanel({getView,getCurrent,getRevision,send,notice,isEngl
   $('aiScope').textContent=tr(`التحديد: ${s.to-s.from} حرفًا. بدون تحديد يُرسل الملف كله، بميزانية إجمالية 6000 بايت UTF-8 مع الطلب.`,`Selection: ${s.to-s.from} characters. Without a selection, send the whole file, within 6000 UTF-8 bytes including your request.`);
  };
  $('aiSettings').onclick=()=>send('aiSettings');
+ $('aiConfigure').onclick=()=>send('aiSettings');
+ $('aiProvider').onchange=()=>{$('aiCloud').checked=false;$('aiCloud').disabled=$('aiProvider').value==='gemini';};
+ $('aiTranslate').onclick=()=>{$('aiInstruction').value=`Translate the document data to ${$('aiTranslateLanguage').value}. Return only the translated text, preserving line breaks and formatting.`;};
  $('aiClose').onclick=()=>{$('aiDialog').close();reset();};
  $('aiDialog').addEventListener('cancel',reset);
  $('aiSend').onclick=()=>{
@@ -20,7 +23,8 @@ export function createAiPanel({getView,getCurrent,getRevision,send,notice,isEngl
   result=null;$('aiOutput').textContent='';$('aiApply').disabled=true;
   pending={requestId:crypto.randomUUID(),docId:doc.docId,revision:getRevision(),from,to,original:content};
   $('aiSend').disabled=true;$('aiStatus').textContent=tr('بانتظار تأكيد الإرسال في أندرويد…','Waiting for Android transfer confirmation…');
-  send('aiRequest',{...pending,content,instruction,allowCloud:$('aiCloud').checked});
+  const provider=$('aiProvider').value;
+  send('aiRequest',{...pending,content,instruction,provider,allowCloud:provider==='gemini'||$('aiCloud').checked});
   $('aiCloud').checked=false;
  };
  $('aiApply').onclick=()=>{

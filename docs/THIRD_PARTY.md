@@ -3,3 +3,5 @@
 Bundled editor libraries: CodeMirror 6 and Lezer (MIT), jsonc-parser (MIT). Exact versions and full supplied license texts are generated into `app/src/main/assets/editor/THIRD_PARTY_NOTICES.txt` by `editor/build.mjs`.
 
 Native libraries: AndroidX Activity, Core, WebKit and AndroidX Test (Apache-2.0); Kotlin standard library (Apache-2.0). Build tools: Gradle and Android Gradle Plugin (Apache-2.0), esbuild (MIT), Playwright (Apache-2.0), JUnit (EPL-1.0). These are separate from the pending license for original app code.
+
+The `ai` JVM module compiles and tests against JSON-Java (`org.json:json:20250517`). This dependency is compile-only for production: Android supplies `org.json` at runtime; the external JAR is not bundled in the APK.

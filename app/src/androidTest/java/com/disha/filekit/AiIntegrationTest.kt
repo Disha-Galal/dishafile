@@ -12,6 +12,30 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class AiIntegrationTest {
+    @Test fun directGeminiWithoutSavedKeyReportsSetupErrorWithoutSendingText() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefs = context.getSharedPreferences("ai", android.content.Context.MODE_PRIVATE)
+        val original = prefs.all.toMap()
+        try {
+            prefs.edit().clear().commit()
+            androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val events = mutableListOf<JSONObject>()
+                    val controller = AiController(activity, { events.add(it) }, { true })
+                    try {
+                        controller.request(JSONObject().put("requestId", "no-key").put("provider", "gemini")
+                            .put("content", "Hello world").put("instruction", "Translate to Arabic"))
+                        assertEquals("aiError", events.single().getString("type"))
+                        assertTrue(events.single().getString("text").contains("No saved Gemini key"))
+                    } finally { controller.destroy() }
+                }
+            }
+        } finally {
+            val edit = prefs.edit().clear()
+            original.forEach { (key, value) -> if (value is String) edit.putString(key, value) }
+            edit.commit()
+        }
+    }
     @Test fun realLoopbackTransportFallsBackAndPreservesArabicWithoutCloud() {
         val requests = mutableListOf<JSONObject>()
         ServerSocket(0, 2, java.net.InetAddress.getByName("127.0.0.1")).use { server ->
