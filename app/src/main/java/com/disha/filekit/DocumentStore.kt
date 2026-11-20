@@ -15,6 +15,10 @@ class DocumentStore(private val context: Context) {
     data class Meta(val name: String, val size: Long, val writable: Boolean)
     private val resolver get() = context.contentResolver
     val recoveryDir = File(context.filesDir, "recovery").apply { mkdirs() }
+    fun cleanTemporaryFiles(now: Long = System.currentTimeMillis()) {
+        context.cacheDir.listFiles()?.filter { it.isDirectory && it.name.startsWith("sqlite-") }?.forEach { it.deleteRecursively() }
+        File(context.cacheDir, "exports").listFiles()?.filter { now - it.lastModified() > 24 * 60 * 60 * 1000L }?.forEach { it.deleteRecursively() }
+    }
     fun meta(uri: Uri): Meta {
         var name = "document.txt"
         var size = -1L

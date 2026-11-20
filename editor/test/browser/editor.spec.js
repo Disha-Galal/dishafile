@@ -48,13 +48,13 @@ test('search replace and theme/language controls work',async({page})=>{
  await page.locator('input[name=search]').fill('hello');await page.locator('input[name=replace]').fill('أهلا');
  await page.locator('button[name=replaceAll]').click();
  expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('أهلا أهلا');
- await page.locator('#menuButton').click();await page.locator('#language').click();await page.locator('#theme').click();await page.locator('#closeMenu').click();
+ await page.locator('#workspaceMenu').click();await page.locator('#language').click();await page.locator('#theme').click();await page.locator('#closeMenu').click();
  await expect(page.locator('html')).toHaveAttribute('lang','en');await expect(page.locator('body')).toHaveClass(/light/);
 });
 test('copy selection sends exact Unicode and navigation snapshots latest keystroke',async({page})=>{
  await load(page,'sample.md','# عربي');await page.locator('.cm-content').click();await page.keyboard.press('Control+a');await page.locator('#copy').click();
  expect(await page.evaluate(()=>nativeMessages.find(m=>m.action==='copy').text)).toBe('# عربي');
- await page.locator('#menuButton').click();await page.locator('#homeMenu').click();
+ await page.locator('#workspaceMenu').click();await page.locator('#homeMenu').click();
  expect(await page.evaluate(()=>nativeMessages.find(m=>m.action==='home').text)).toBe('# عربي');
 });
 test('precise line selection, cursor controls and AI apply are undoable',async({page})=>{
@@ -94,7 +94,7 @@ for(const [name,text] of [['sample.ts','const اسم: string = "عربي";'],['s
  });
 }
 test('NDJSON validation reports the malformed record',async({page})=>{
- await load(page,'events.ndjson','{"name":"عربي"}\n{"n": }');await page.locator('#menuButton').click();await page.locator('#validate').click();
+ await load(page,'events.ndjson','{"name":"عربي"}\n{"n": }');await page.locator('#workspaceMenu').click();await page.locator('#validate').click();
  await expect(page.locator('#message')).toContainText('2');
  expect(await page.evaluate(()=>Disha.snapshot().text)).toBe('{"name":"عربي"}\n{"n": }');
 });

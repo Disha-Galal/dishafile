@@ -1,3 +1,11 @@
+## 1.4.0 — 2026-11-20
+
+- Add local PHP highlighting and lossless PHP/gzip file handling.
+- Add a bounded, read-only SQLite table browser using temporary private snapshots.
+- Add continuous hold-to-zoom, a text-size slider, persisted collapsed toolbars and a compact filename bar.
+- Refine Android portrait/landscape layouts with a charcoal, mint and gold theme.
+- Separate reading controls and database rendering into dedicated modules; remove abandoned SQLite snapshots and expired share exports while retaining recovery files.
+
 # Changelog
 
 ## 1.2.0 — 2026-11-16

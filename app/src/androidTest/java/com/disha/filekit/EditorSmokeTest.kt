@@ -28,6 +28,27 @@ class EditorSmokeTest {
         }
         fail("Condition timed out: $code")
     }
+    @Test fun readingPreferencesSurviveActivityRecreation() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefs = context.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE)
+        val oldSize = prefs.getInt("fontSize", 15)
+        val oldCollapsed = prefs.getBoolean("controlsCollapsed", false)
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                waitFor(scenario, "Boolean(window.Disha && window.Disha.ready)")
+                js(scenario, "Native.postMessage(JSON.stringify({action:'settings',lang:'ar',dark:true,wrap:true,fontSize:23,controlsCollapsed:true}))")
+                waitFor(scenario, "Boolean(window.Disha.ready)")
+                scenario.recreate()
+                waitFor(scenario, "Boolean(window.Disha && window.Disha.ready && document.querySelector('#workspace').classList.contains('collapsed'))")
+                val data = JSONObject().put("type","load").put("docId","preferences").put("name","sample.php")
+                    .put("text","<?php echo 'عربي';").put("encoding","UTF-8").put("newline","CRLF")
+                js(scenario, "Disha.receive($data)")
+                assertEquals("\"23px\"", js(scenario, "getComputedStyle(document.querySelector('.cm-editor')).fontSize"))
+                assertEquals("\"false\"", js(scenario, "document.querySelector('#toggleControls').getAttribute('aria-expanded')"))
+                assertEquals(23, prefs.getInt("fontSize", 15))
+            }
+        } finally { prefs.edit().putInt("fontSize",oldSize).putBoolean("controlsCollapsed",oldCollapsed).commit() }
+    }
     @Test fun offlineLaunchEditUndoAndInertHtml() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             waitFor(scenario, "Boolean(window.Disha && window.Disha.ready)")

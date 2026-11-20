@@ -1,3 +1,21 @@
+# FileKit 1.4: Android controls and new formats
+
+This project By Gogo & Disha ®
+
+Open a `.php` or `.phtml` file with **Open file** to edit its source with syntax highlighting. PHP is never executed. The existing confirmed-save, backup, conflict detection and readback verification steps apply.
+
+Open a standalone SQLite 3 `.db`, `.sqlite`, `.sqlite3` or `.db3` file with **Open file**. Select a table and use **Previous / Next** for 50-row pages. The viewer is read-only. Long text and BLOBs have clearly marked previews. Encrypted databases, other DB formats, views, virtual tables and external WAL files are unsupported. Export a closed database from the source app first. The source file is never written by the viewer; its private temporary copy is removed when closed.
+
+Hold **A− / A+** to keep zooming, or hold the line-number gutter or a text list to open **Text size**. The slider spans 11–32 px and also scales recent filenames, flow rows and database values. Long-press inside the text editor still selects text normally. **Options → Text size** is available in every viewer.
+
+Tap the chevron beside the filename to collapse or restore the upper tools and metadata. Save and the three-dot menu remain visible. Size and collapsed state are saved on Android. The compact layout also works in landscape and with the software keyboard.
+
+To save space, FileKit clears abandoned database snapshots and share copies older than one day on launch. Drafts and original backups remain available through **Recover draft / backup**.
+
+The earlier guide below still describes file saving, encoding, AI setup and recovery.
+
+---
+
 # Disha FileKit 1.2 — User Guide
 
 This project By Gogo & Disha ®

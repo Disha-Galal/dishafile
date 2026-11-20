@@ -2,6 +2,31 @@
 
 This project By Gogo & Disha ®
 
+## Android update 1.4.0
+
+- Premium dark workspace with charcoal surfaces, mint controls and warm gold accents.
+- Open and edit PHP source (`.php`, `.phtml`, `.phps`, PHP 3/4/5/7/8 extensions), including gzip copies, with local syntax highlighting. PHP and HTML are displayed as inert source.
+- Open standalone, unencrypted SQLite 3 databases (`.db`, `.db3`, `.sqlite`, `.sqlite3`, or detected by header). Browse ordinary tables in read-only pages; encrypted databases and other DB formats are unsupported.
+- Hold **A− / A+** to zoom continuously between 11 and 32 px. Hold line numbers or text lists to open the size slider. Normal long-press text selection stays available inside the editor.
+- Tap the small chevron beside the filename to hide or restore the top tools. Save and the menu remain accessible. Text size and tool visibility survive app restarts.
+- Temporary database snapshots are deleted when closed. Startup clears abandoned snapshots and share exports older than 24 hours. Drafts, backups and source documents are retained.
+
+New editor modules: `editor/src/reading-controls.js` owns touch/size controls, `editor/src/database-viewer.js` renders database pages, and `app/.../DatabaseStore.kt` manages bounded, temporary read-only SQLite snapshots. Bundled assets remain in `app/src/main/assets/editor`; no CDN is used.
+
+```text
+app/src/main/java/com/disha/filekit/
+  DatabaseStore.kt       SQLite snapshots, limits and paging
+  DocumentStore.kt       SAF, recovery and temporary-file cleanup
+  MainActivity.kt        Allowlisted native bridge and sessions
+editor/src/
+  reading-controls.js    Long press, zoom and toolbar visibility
+  database-viewer.js     Read-only database tables and cells
+  languages.js           Local syntax modes, including PHP
+  style.css              Shared Android dark and light themes
+```
+
+Database limits: 40 MiB, 256 ordinary tables, 64 columns, 50 rows per page, 256 KiB cell text per page, and browsing through row 10,050. Text cells preview up to 4096 bytes; BLOB cells preview 32 bytes as hex, with visible truncation labels. Views and virtual tables are excluded. Export a standalone database after closing its source app; external WAL/journal files are not imported. Invalid text encoding is reported without replacement characters.
+
 [دليل الاستخدام الكامل / User Guide](docs/USER_GUIDE.md) — إعداد Ollama وGemini وتنزيل APK واستخدام المحرر.
 
 محرر ملفات كود ونصوص خفيف لأندرويد، عربي من الأول وفيه تحويل للإنجليزي. بيفتح من Downloads واختيار الملفات ومشاركة Telegram لو التطبيق بيدي صلاحية للملف. تحرير الملفات شغال من غير نت أو حساب. صلاحية INTERNET مخصصة لطلب AI يختاره المستخدم؛ مفيش وصول شامل للتخزين، وصفحات WebView نفسها محظورة عن الشبكة.

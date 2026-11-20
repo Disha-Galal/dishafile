@@ -9,7 +9,7 @@ import java.util.zip.GZIPInputStream
 class TextCodecTest {
     @Test fun extendedTextFormatsPreserveArabicBomCrLfAndGzip() {
         val bytes = byteArrayOf(0xef.toByte(), 0xbb.toByte(), 0xbf.toByte()) + "اسم = عربي 😀\r\nقيمة = 123\r\n".toByteArray()
-        val names = listOf("source.ts", "view.tsx", "app.kt", "build.kts", "main.java", "main.c", "main.cpp", "main.cs", "main.go", "main.rs", "main.rb", "project.toml", "app.properties", "script.ps1", "data.tsv", "events.ndjson", "image.svg", "captions.srt", "captions.vtt", ".env", "Dockerfile", ".gitignore", ".editorconfig", "script.bat", "module.mjs")
+        val names = listOf("index.php", "page.phtml", "source.phps", "legacy.php5", "source.ts", "view.tsx", "app.kt", "build.kts", "main.java", "main.c", "main.cpp", "main.cs", "main.go", "main.rs", "main.rb", "project.toml", "app.properties", "script.ps1", "data.tsv", "events.ndjson", "image.svg", "captions.srt", "captions.vtt", ".env", "Dockerfile", ".gitignore", ".editorconfig", "script.bat", "module.mjs")
         for (name in names) {
             assertArrayEquals(name, bytes, TextCodec.encode(open(bytes, name)))
             val compressed = gzip(bytes)

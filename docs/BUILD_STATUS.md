@@ -1,3 +1,48 @@
+# Validation — FileKit 1.4.0 — 2026-11-20
+
+This project By Gogo & Disha ®
+
+Source commit: `01eb7b1d985cbad9bfa001245e0c5aa6bbd28187`, on `build/android-dark-1.4.0`. [Review PR #2](https://github.com/Disha-Galal/dishafile/pull/2) targets the existing 1.3 branch; no automatic merge was performed. [Android build and emulator run](https://github.com/Disha-Galal/dishafile/actions/runs/44805968188).
+
+| Check | Result |
+|---|---|
+| Kotlin/JVM codec, Flow and AI | 42 passed |
+| JavaScript JSON tools | 6 passed |
+| Chromium browser tests | 29 passed |
+| Android API 33 emulator, airplane mode | 15 passed |
+| Total automated checks | 92 passed |
+| Android lint | 0 errors, 20 warnings |
+| Debug APK and instrumentation APK | Built successfully |
+| Rebuilt assets versus committed source | Exact match |
+| Packaged APK editor assets versus committed source | Exact match |
+| Physical phone acceptance | Pending |
+
+New checks cover PHP highlighting, Arabic/BOM/CRLF/gzip round-trips, read-only providers, collapsed tools, repeated zoom and release, saved size, short landscape layouts, database paging, inert values, large integers and stale messages. Android database checks also cover UTF-16, malformed text, quoted identifiers, invalid and oversized database files, source preservation and cache cleanup.
+
+- [Download APK ZIP](https://github.com/Disha-Galal/dishafile/actions/runs/44805968188/artifacts/14662857624): extract and install `app-debug.apk`, version `1.4.0`, versionCode `5`, 3,022,088 bytes. Artifact expires 2026-12-20 and may require GitHub sign-in.
+- [Build and lint reports](https://github.com/Disha-Galal/dishafile/actions/runs/44805968188/artifacts/14663147330).
+- [Markdown user guide](USER_GUIDE.md) and [guide artifact](https://github.com/Disha-Galal/dishafile/actions/runs/44805968188/artifacts/14662852643).
+- [API 33 instrumentation and airplane-mode evidence](https://github.com/Disha-Galal/dishafile/actions/runs/44805968188/artifacts/14663882314), with [test log](validation/android-13-1.4-instrumentation.txt) and [airplane-mode log](validation/1.4-airplane-mode.txt).
+- Phone-size Chromium previews: [home](home-dark-phone.png), [collapsed editor](editor-dark-phone.png).
+
+APK SHA-256:
+
+```text
+e26627fe249f98437d6b79605e3c673e575ab22bf2b634ca37feabada2f661ec
+```
+
+The binary manifest was checked: package `com.disha.filekit`, minSdk 26, targetSdk 35; INTERNET and the AndroidX receiver permission only, with no broad storage permission. WebView origin/frame restrictions, CSP, blocked remote requests and the confirmed text-save pipeline remain in place.
+
+Database support is limited to standalone, unencrypted SQLite 3 copies. The viewer cannot edit or save over a database, and excludes views and virtual tables. WAL sidecars are not imported; export a closed database first. Bounds and marked cell previews are documented in the README and user guide.
+
+Removed 20,086,506 bytes of redundant, ignored downloaded artifacts from earlier builds in this development checkout. The JDK and Ollama runtime were retained. In-app cleanup only removes abandoned SQLite snapshots and share exports older than 24 hours; recovery drafts and backups are retained. The current APK is about 46 KB larger than 1.3 because PHP parsing and the new controls are included locally.
+
+Physical-phone checks are listed in [ACCEPTANCE.md](ACCEPTANCE.md) and have not been run for this update. Debug signing keys can differ between CI runs; export recovery material before uninstalling an earlier build if Android rejects the update.
+
+The first emulator run exposed Android’s internal `android_metadata` table being selected before user data. The table picker now excludes it, with a regression assertion in the native tests.
+
+---
+
 # حالة التحقق — 1.3.0 — 2026-11-18
 
 This project By Gogo & Disha ®

@@ -46,3 +46,15 @@ Known v1 limits: one document at a time; no archives, binary editing, execution,
 - حدد فقرة، اختار لغة الترجمة واضغط تجهيز الطلب ثم إرسال. راجع الترجمة قبل استبدال النطاق؛ اختبر التراجع وإلغاء نافذة التأكيد قبل الإرسال، ولا تحفظ فوق الأصل تلقائيًا.
 
 هذه خطوات قبول مطلوبة، وليست نتائج اختبارات منفذة على هاتف فعلي.
+
+
+## FileKit 1.4 physical-phone checks (pending)
+
+- Open PHP containing Arabic, emoji, BOM and CRLF. Edit, undo and Save As; reopen and verify exact encoding/newlines. Try a read-only provider and a gzip PHP file.
+- Open a standalone SQLite database from Downloads, including an Arabic filename. Switch tables and pages, inspect NULL, a large integer, long text and BLOB previews. Confirm source bytes stay unchanged. Try malformed and encrypted DB files and a file over 40 MiB.
+- Hold A− and A+; release and drag away to stop. Hold line numbers and recent/flow/database lists to show the size slider. Confirm ordinary text long-press still selects text.
+- Collapse the top tools using the filename chevron. Confirm save, menu and expand remain reachable in portrait, landscape and with the Android keyboard open. Restart and verify saved size and toolbar visibility.
+- Check TalkBack labels, contrast and comfortable touch targets. Verify the dark and light themes in both Arabic and English.
+- Verify closing a database removes its temporary snapshot. Verify old share cache is cleaned on the next launch while recent shares, recovery drafts and backups remain.
+
+Do not report these checks as passed until performed on a physical phone.
