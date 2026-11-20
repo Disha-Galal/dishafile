@@ -34,6 +34,30 @@ public final class TestDocumentsProvider extends DocumentsProvider {
             int count;
             while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
         } catch (IOException error) { throw new IllegalStateException(error); }
+        File fixture = new File(directory(), "sample.db");
+        android.database.sqlite.SQLiteDatabase.deleteDatabase(fixture);
+        try (android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(fixture, null)) {
+            db.execSQL("CREATE TABLE people (id INTEGER, name TEXT, payload BLOB)");
+            for (int i = 0; i < 55; i++) db.execSQL("INSERT INTO people VALUES (?, ?, ?)", new Object[]{i == 0 ? Long.MAX_VALUE : i, "عربي " + i, new byte[64]});
+            db.execSQL("CREATE TABLE \"z_odd\"\"table\" (\"a\"\"b\" TEXT)");
+            db.execSQL("INSERT INTO \"z_odd\"\"table\" VALUES ('<script>window.pwned=true</script>')");
+            db.execSQL("CREATE TABLE z_invalid_text (value TEXT)");
+            db.execSQL("INSERT INTO z_invalid_text VALUES (CAST(X'C328' AS TEXT))");
+            db.execSQL("CREATE VIEW excluded_view AS SELECT * FROM people");
+        }
+        File utf16 = new File(directory(), "utf16.db");
+        android.database.sqlite.SQLiteDatabase.deleteDatabase(utf16);
+        try (android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(utf16, null)) {
+            db.execSQL("PRAGMA encoding='UTF-16le'");
+            db.execSQL("CREATE TABLE texts (value TEXT)");
+            db.execSQL("INSERT INTO texts VALUES (?)", new Object[]{"عربي 😀"});
+        }
+        try (java.io.RandomAccessFile output = new java.io.RandomAccessFile(new File(directory(), "oversized.db"), "rw")) {
+            output.write("SQLite format 3\u0000".getBytes(StandardCharsets.US_ASCII));
+            output.setLength(40L * 1024 * 1024 + 1);
+        } catch (IOException error) { throw new IllegalStateException(error); }
+        write(new File(directory(), "invalid.db"), "SQLite format 3\u0000");
+        write(new File(directory(), "encrypted.db"), "encrypted or unsupported format");
         return true;
     }
     @Override public Cursor queryRoots(String[] projection) {
@@ -50,7 +74,7 @@ public final class TestDocumentsProvider extends DocumentsProvider {
     }
     private void addDocument(MatrixCursor cursor, String id) throws FileNotFoundException {
         if (id.equals("root")) cursor.addRow(new Object[]{id, "Test files", Document.MIME_TYPE_DIR, Document.FLAG_DIR_SUPPORTS_CREATE, 0});
-        else cursor.addRow(new Object[]{id, id, id.endsWith("json") ? "application/json" : "text/plain", (id.equals("readonly.txt") || id.equals("flows (2)")) ? 0 : Document.FLAG_SUPPORTS_WRITE, file(id).length()});
+        else cursor.addRow(new Object[]{id, id, id.endsWith("json") ? "application/json" : "text/plain", (id.equals("readonly.txt") || id.equals("flows (2)") || id.endsWith(".db")) ? 0 : Document.FLAG_SUPPORTS_WRITE, file(id).length()});
     }
     @Override public Cursor queryDocument(String id, String[] projection) throws FileNotFoundException {
         MatrixCursor cursor = cursor(); addDocument(cursor, id); return cursor;
@@ -62,7 +86,7 @@ public final class TestDocumentsProvider extends DocumentsProvider {
         return cursor;
     }
     @Override public ParcelFileDescriptor openDocument(String id, String mode, CancellationSignal signal) throws FileNotFoundException {
-        if ((id.equals("readonly.txt") || id.equals("flows (2)")) && !mode.equals("r")) throw new FileNotFoundException("Read-only provider");
+        if ((id.equals("readonly.txt") || id.equals("flows (2)") || id.endsWith(".db")) && !mode.equals("r")) throw new FileNotFoundException("Read-only provider");
         return ParcelFileDescriptor.open(file(id), ParcelFileDescriptor.parseMode(mode));
     }
     @Override public String createDocument(String parentId, String mimeType, String displayName) throws FileNotFoundException {

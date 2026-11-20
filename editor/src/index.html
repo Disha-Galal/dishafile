@@ -6,19 +6,25 @@
 <title>Disha FileKit</title><link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><div class="brand">▤ <b>Disha FileKit</b><small data-i18n="offline"></small></div><button id="menuButton" aria-label="Menu">☰</button></header>
+<header><div class="brand"><span class="brand-mark" aria-hidden="true">{·}</span><div><b>Disha FileKit</b><small data-i18n="offline"></small></div></div><button id="menuButton" aria-label="Menu">☰</button></header>
 <main id="home">
-  <div class="hero-icon">{ }</div><h1 data-i18n="welcome"></h1><p data-i18n="intro"></p>
+  <span class="eyebrow" data-i18n="workspaceLabel"></span><div class="hero-icon" aria-hidden="true">{<span>·</span>}</div><h1 data-i18n="welcome"></h1><p data-i18n="intro"></p>
   <button class="primary big" id="openHome" data-i18n="open"></button><button class="big" id="newHome" data-i18n="new"></button>
   <button id="recoverHome" class="big" data-i18n="recover"></button>
-  <h2 data-i18n="recent"></h2><div id="recents"></div><p class="hint" data-i18n="formats"></p>
+  <div class="section-heading"><h2 data-i18n="recent"></h2><span class="local-dot" data-i18n="onDevice"></span></div><div id="recents"></div><details class="format-list"><summary data-i18n="supportedFormats"></summary><p class="hint" data-i18n="formats"></p></details>
 </main>
 <section id="workspace" hidden>
-  <div id="documentBar"><div><strong id="filename" dir="auto"></strong><small id="metadata"></small></div><span id="dirty" role="status"></span></div>
-  <div id="tools"><button id="aiOpen">✦ AI</button><button id="selectRange">تحديد السطور / Lines</button><button id="undo" data-i18n="undo"></button><button id="redo" data-i18n="redo"></button><button id="wrap" data-i18n="wrap"></button><button id="smaller" dir="ltr" aria-label="Smaller font">A−</button><button id="larger" dir="ltr" aria-label="Larger font">A+</button></div>
+  <div id="documentBar"><button id="toggleControls" aria-expanded="true" aria-controls="tools precision metadata" aria-label="Hide tools">⌃</button><div class="document-info"><strong id="filename" dir="auto"></strong><small id="metadata"></small></div><span id="dirty" role="status"></span><button id="workspaceMenu" aria-label="Menu">⋮</button></div>
+  <div id="tools"><button id="aiOpen">✦ AI</button><button id="selectRange">تحديد السطور / Lines</button><button id="undo" data-i18n="undo"></button><button id="redo" data-i18n="redo"></button><button id="wrap" data-i18n="wrap"></button><button id="textSize" data-i18n="textSize"></button><button id="smaller" dir="ltr" aria-label="Smaller font">A−</button><button id="larger" dir="ltr" aria-label="Larger font">A+</button></div>
   <div id="precision"><button id="left" aria-label="Left">←</button><button id="right" aria-label="Right">→</button><button id="up" aria-label="Up">↑</button><button id="down" aria-label="Down">↓</button><button id="indent">⇥</button><output dir="auto" id="position" aria-live="off"></output></div>
   <div id="editor" dir="ltr"></div>
   <nav id="actions"><button id="copy" data-i18n="copy"></button><button id="find" data-i18n="find"></button><button id="format" data-i18n="format"></button><button id="save" class="primary" data-i18n="save"></button><button id="saveAs" data-i18n="saveAs"></button></nav>
+</section>
+<section id="databaseViewer" hidden>
+ <span class="eyebrow" id="databaseReadOnly"></span><h2 id="databaseTitle"></h2><strong id="databaseName" dir="auto"></strong>
+ <p class="hint" id="databaseHint"></p><label id="databaseTableLabel" for="databaseTables"></label><select id="databaseTables" dir="auto"></select>
+ <p id="databaseStatus" role="status"></p><div id="databaseRows" tabindex="0" role="region" aria-label="Database rows"></div>
+ <nav class="database-pagination"><button id="databasePrevious" disabled></button><button id="databaseNext" disabled></button></nav>
 </section>
 <section id="flowViewer" hidden>
   <h2 id="flowTitle"></h2><strong id="flowName" dir="auto"></strong>
@@ -30,7 +36,8 @@
   <p id="flowWarning"></p><button id="flowExport"></button></div>
 </section>
 <div id="message" role="status" aria-live="polite"></div>
-<dialog id="menu"><h2 data-i18n="options"></h2><button id="openMenu" data-i18n="open"></button><button id="newMenu" data-i18n="new"></button><button id="homeMenu" data-i18n="home"></button><button id="share" data-i18n="share"></button><button id="validate" data-i18n="validate"></button><button id="encoding" data-i18n="encoding"></button><button id="aiSettings">إعداد AI / AI settings</button><button id="theme" data-i18n="theme"></button><button id="language">English / عربي</button><button id="closeMenu" data-i18n="close"></button></dialog>
+<dialog id="menu"><h2 data-i18n="options"></h2><button id="openMenu" data-i18n="open"></button><button id="newMenu" data-i18n="new"></button><button id="homeMenu" data-i18n="home"></button><button id="share" data-i18n="share"></button><button id="validate" data-i18n="validate"></button><button id="encoding" data-i18n="encoding"></button><button id="aiSettings">إعداد AI / AI settings</button><button id="menuTextSize" data-i18n="textSize"></button><button id="theme" data-i18n="theme"></button><button id="language">English / عربي</button><button id="closeMenu" data-i18n="close"></button></dialog>
+<dialog id="fontDialog" aria-labelledby="fontTitle"><h2 id="fontTitle" data-i18n="textSize"></h2><p data-i18n="zoomHint"></p><div class="font-preview" dir="auto">Aa · أب · 0123</div><label for="fontSlider" data-i18n="textSize"></label><output id="fontValue" for="fontSlider" dir="ltr">15 px</output><input id="fontSlider" type="range" min="11" max="32" value="15" step="1"><button id="fontReset" data-i18n="resetSize"></button><button id="fontClose" class="primary" data-i18n="close"></button></dialog>
 <dialog id="formatDialog"><h2 data-i18n="format"></h2><p data-i18n="formatWarning"></p><button id="indent2">2 spaces</button><button id="indent4">4 spaces</button><button id="minify" data-i18n="minify"></button><button id="closeFormat" data-i18n="cancel"></button></dialog>
 <dialog id="rangeDialog"><h2>تحديد السطور / Select lines</h2><label for="rangeFrom">من / From</label><input id="rangeFrom" type="number" min="1" inputmode="numeric"><label for="rangeTo">إلى / To</label><input id="rangeTo" type="number" min="1" inputmode="numeric"><button id="rangeApply">تحديد / Select</button><button id="rangeClose">إغلاق / Close</button></dialog>
 <dialog id="aiDialog"><h2>✦ Disha AI</h2><p id="aiScope"></p>

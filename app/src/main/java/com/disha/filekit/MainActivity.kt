@@ -40,6 +40,8 @@ class MainActivity : ComponentActivity() {
     private var busy = false
     private var pendingIntent: Intent? = null
     private var current: Session? = null
+    private data class DatabaseSession(val id: String, val name: String, val snapshot: DatabaseStore.Snapshot)
+    private var databaseSession: DatabaseSession? = null
     private var pendingSave: Session? = null
     private data class FlowSession(val id: String, val name: String, val uri: Uri, val document: FlowDocument)
     private var flowSession: FlowSession? = null
@@ -72,9 +74,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         store = DocumentStore(this)
+        io.execute { store.cleanTemporaryFiles() }
         ai = AiController(this, ::emit) { lang == "en" }
         lang = prefs.getString("lang", "ar") ?: "ar"
-        val root = FrameLayout(this)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+        val root = FrameLayout(this).apply { setBackgroundColor(android.graphics.Color.rgb(9, 13, 20)) }
         web = WebView(this)
         root.addView(web, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
@@ -126,7 +133,7 @@ class MainActivity : ComponentActivity() {
                 if (busy) return
                 web.evaluateJavascript("JSON.stringify(window.Disha.snapshot())") { value ->
                     try { val raw = JSONTokener(value).nextValue(); if (raw is String && raw != "null") updateSnapshot(JSONObject(raw)) } catch (_: Exception) { }
-                    guard { if (current == null && flowSession == null) finish() else showHome() }
+                    guard { if (current == null && flowSession == null && databaseSession == null) finish() else showHome() }
                 }
             }
         })
@@ -142,7 +149,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     override fun onPause() { if (ready) emit(JSONObject().put("type", "flush")); super.onPause() }
-    override fun onDestroy() { ai.destroy(); web.destroy(); io.shutdown(); super.onDestroy() }
+    override fun onDestroy() { clearDatabase(); ai.destroy(); web.destroy(); io.shutdown(); super.onDestroy() }
 
     private fun emit(message: JSONObject) {
         if (isDestroyed || !ready) return
@@ -162,14 +169,14 @@ class MainActivity : ComponentActivity() {
         val action = message.optString("action")
         if (action == "ready") {
             ready = true
-            emit(JSONObject().put("type", "settings").put("lang", lang).put("dark", prefs.getBoolean("dark", true)).put("wrap", prefs.getBoolean("wrap", true)).put("fontSize", prefs.getInt("fontSize", 15)))
+            emit(JSONObject().put("type", "settings").put("lang", lang).put("dark", prefs.getBoolean("dark", true)).put("wrap", prefs.getBoolean("wrap", true)).put("fontSize", prefs.getInt("fontSize", 15)).put("controlsCollapsed", prefs.getBoolean("controlsCollapsed", false)))
             recentList()
             pendingIntent?.let { pendingIntent = null; handleIntent(it) }
             return
         }
         if (action == "settings") {
             lang = if (message.optString("lang") == "en") "en" else "ar"
-            prefs.edit().putString("lang", lang).putBoolean("dark", message.optBoolean("dark", true)).putBoolean("wrap", message.optBoolean("wrap", true)).putInt("fontSize", message.optInt("fontSize", 15).coerceIn(11, 28)).apply()
+            prefs.edit().putString("lang", lang).putBoolean("dark", message.optBoolean("dark", true)).putBoolean("wrap", message.optBoolean("wrap", true)).putInt("fontSize", message.optInt("fontSize", 15).coerceIn(11, 32)).putBoolean("controlsCollapsed", message.optBoolean("controlsCollapsed", false)).apply()
             return
         }
         if (action == "aiCancel") { ai.cancel(); return }
@@ -183,6 +190,13 @@ class MainActivity : ComponentActivity() {
             "home" -> guard { showHome() }
             "recent" -> guard { val uri = Uri.parse(message.getString("uri")); if (uri.scheme == "content") loadUri(uri) }
             "recover" -> guard { recover() }
+            "databasePage" -> databaseSession?.takeIf { it.id == message.optString("databaseId") }?.let { session ->
+                val table = message.optString("table")
+                val offset = message.optInt("offset", -1)
+                background({ session.snapshot.page(table, offset) }) { page ->
+                    if (databaseSession?.id == session.id) emit(page.put("type", "databasePage").put("databaseId", session.id))
+                }
+            }
             "flowDetail" -> flowSession?.takeIf { it.id == message.optString("flowId") }?.let { session ->
                 val index = message.optInt("index", -1)
                 if (index in session.document.summaries.indices) {
@@ -240,7 +254,7 @@ class MainActivity : ComponentActivity() {
                 }.show()
         } else next()
     }
-    private fun showHome() { clearFlow(); current = null; emit(JSONObject().put("type", "home")); recentList() }
+    private fun showHome() { clearDatabase(); clearFlow(); current = null; emit(JSONObject().put("type", "home")); recentList() }
     private fun newFile() {
         val input = EditText(this).apply { setText("untitled.txt"); selectAll(); isSingleLine = true }
         AlertDialog.Builder(this).setTitle(tr("اسم الملف (مثال: notes.md)", "Filename (e.g. notes.md)" )).setView(input)
@@ -258,6 +272,8 @@ class MainActivity : ComponentActivity() {
         io.execute {
             val result = runCatching {
                 val meta = store.meta(uri)
+                val database = DatabaseStore(this).open(uri, meta.name)
+                if (database != null) return@runCatching DatabaseSession(UUID.randomUUID().toString(), meta.name, database)
                 val flow = store.readFlow(uri, meta.name)
                 if (flow != null) return@runCatching FlowSession(UUID.randomUUID().toString(), meta.name, uri, flow)
                 if (!preview && meta.size > TextCodec.EDIT_LIMIT && !meta.name.endsWith(".gz", true)) throw FileProblem("tooLarge")
@@ -267,10 +283,11 @@ class MainActivity : ComponentActivity() {
                 Session(UUID.randomUUID().toString(), meta.name, file, uri, meta.writable, if (file.preview) "" else before, file.text)
             }
             runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+                if (isDestroyed) { (result.getOrNull() as? DatabaseSession)?.snapshot?.close(); return@runOnUiThread }
                 setBusy(false)
                 result.fold({ loaded ->
                     when (loaded) {
+                        is DatabaseSession -> { displayDatabase(loaded); addRecent(uri, loaded.name) }
                         is FlowSession -> { displayFlow(loaded); addRecent(uri, loaded.name) }
                         is Session -> { display(loaded); addRecent(uri, loaded.name) }
                         else -> error(FileProblem("io"))
@@ -289,8 +306,18 @@ class MainActivity : ComponentActivity() {
     }
     private fun cancelFlowDetail() { flowGeneration++; flowTask?.cancel(true); flowTask = null }
     private fun clearFlow() { cancelFlowDetail(); flowSession = null; flowCache.clear(); flowExport = null }
+    private fun clearDatabase() {
+        val old = databaseSession
+        databaseSession = null
+        if (old != null) io.execute { old.snapshot.close() }
+    }
+    private fun displayDatabase(session: DatabaseSession) {
+        clearDatabase(); clearFlow(); current = null; databaseSession = session
+        emit(JSONObject().put("type", "databaseLoad").put("databaseId", session.id).put("name", session.name)
+            .put("tables", JSONArray(session.snapshot.tables)))
+    }
     private fun displayFlow(session: FlowSession) {
-        clearFlow(); current = null; flowSession = session
+        clearDatabase(); clearFlow(); current = null; flowSession = session
         val summaries = JSONArray()
         session.document.summaries.forEach { item -> summaries.put(JSONObject().put("index", item.index).put("type", item.type)
             .put("method", item.method).put("host", item.host).put("path", item.path).put("status", item.status)
@@ -306,7 +333,7 @@ class MainActivity : ComponentActivity() {
         return JSONObject().put("index", detail.index).put("rows", rows(detail.rows)).put("extracted", rows(detail.extracted)).put("notices", JSONArray(detail.notices))
     }
     private fun display(session: Session) {
-        clearFlow()
+        clearDatabase(); clearFlow()
         current = session
         val file = session.file
         emit(JSONObject().put("type", "load").put("docId", session.id).put("name", session.name).put("text", file.text).put("encoding", file.encoding)
@@ -424,6 +451,10 @@ class MainActivity : ComponentActivity() {
     private fun error(error: Throwable) {
         val kind = (error as? FileProblem)?.kind ?: when (error) { is SecurityException -> "permission"; else -> "io" }
         val messages = mapOf(
+            "databaseUnsupported" to ("ملف DB غير مدعوم. افتح نسخة SQLite 3 مستقلة غير مشفرة." to "Unsupported DB file. Open a standalone, unencrypted SQLite 3 copy."),
+            "databaseEncoding" to ("الجدول يحتوي نصًا بترميز غير صالح؛ لا يمكن عرضه دون فقد بيانات." to "Table contains invalid text encoding; it cannot be displayed losslessly."),
+            "databaseInvalid" to ("قاعدة البيانات تالفة أو غير مكتملة أو الجدول غير مدعوم. افتح نسخة SQLite مصدرة بعد إغلاق التطبيق المصدر." to "Invalid or incomplete database, or unsupported table. Open a SQLite copy exported after closing the source app."),
+            "databaseLimit" to ("قاعدة البيانات تجاوزت حدود العرض: 40 MiB، 256 جدولًا و64 عمودًا." to "Database exceeds preview limits: 40 MiB, 256 tables, 64 columns or 256 KiB of cell text per page."),
             "exists" to ("المزود رجّع ملفًا موجودًا. اختار اسمًا جديدًا؛ الاستبدال يحتاج مسار الحفظ المؤكد." to "Provider returned an existing document. Choose a new name; replacement requires the confirmed Save flow."),
             "flowInvalid" to ("ملف Flow تالف أو ناقص أو بنيته غير صالحة. الأصل ما اتغيرش." to "Invalid or truncated Flow file. Original unchanged."),
             "flowLimit" to ("ملف Flow تجاوز حدود الحجم أو التعقيد الآمنة." to "Flow file exceeds safe size or complexity limits."),

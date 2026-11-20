@@ -47,7 +47,7 @@ class DocumentIntegrationTest {
         val readOnly=uri("readonly.txt")
         assertFalse(store.meta(readOnly).writable)
         assertEquals("read-only عربي",store.read(readOnly,"readonly.txt").text)
-        for (name in listOf("readonly.ts", "readonly.kt", "readonly.toml", "readonly.svg", "readonly.ndjson")) {
+        for (name in listOf("readonly.php", "readonly.phtml", "readonly.ts", "readonly.kt", "readonly.toml", "readonly.svg", "readonly.ndjson")) {
             assertEquals("read-only عربي",store.read(readOnly,name).text)
             assertFalse(store.meta(readOnly).writable)
         }
