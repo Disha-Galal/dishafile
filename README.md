@@ -13,6 +13,18 @@ This project By Gogo & Disha ®
 
 New editor modules: `editor/src/reading-controls.js` owns touch/size controls, `editor/src/database-viewer.js` renders database pages, and `app/.../DatabaseStore.kt` manages bounded, temporary read-only SQLite snapshots. Bundled assets remain in `app/src/main/assets/editor`; no CDN is used.
 
+```text
+app/src/main/java/com/disha/filekit/
+  DatabaseStore.kt       SQLite snapshots, limits and paging
+  DocumentStore.kt       SAF, recovery and temporary-file cleanup
+  MainActivity.kt        Allowlisted native bridge and sessions
+editor/src/
+  reading-controls.js    Long press, zoom and toolbar visibility
+  database-viewer.js     Read-only database tables and cells
+  languages.js           Local syntax modes, including PHP
+  style.css              Shared Android dark and light themes
+```
+
 Database limits: 40 MiB, 256 ordinary tables, 64 columns, 50 rows per page, 256 KiB cell text per page, and browsing through row 10,050. Text cells preview up to 4096 bytes; BLOB cells preview 32 bytes as hex, with visible truncation labels. Views and virtual tables are excluded. Export a standalone database after closing its source app; external WAL/journal files are not imported. Invalid text encoding is reported without replacement characters.
 
 [دليل الاستخدام الكامل / User Guide](docs/USER_GUIDE.md) — إعداد Ollama وGemini وتنزيل APK واستخدام المحرر.
