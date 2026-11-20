@@ -100,7 +100,7 @@ class DatabaseStore(private val context: Context) {
                 database = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS) { }
                 database.execSQL("PRAGMA trusted_schema=OFF")
                 val tables = mutableListOf<String>()
-                database.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND rootpage>0 AND name NOT LIKE 'sqlite_%' ORDER BY name LIMIT 257", null).use { cursor ->
+                database.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND rootpage>0 AND name NOT LIKE 'sqlite_%' AND name!='android_metadata' ORDER BY name LIMIT 257", null).use { cursor ->
                     while (cursor.moveToNext()) {
                         val table = cursor.getString(0)
                         if (tables.size == 256 || table.length > 256) throw FileProblem("databaseLimit")

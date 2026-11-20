@@ -40,6 +40,7 @@ class DatabaseIntegrationTest {
         val before = context.cacheDir.listFiles()!!.count { it.name.startsWith("sqlite-") }
         DatabaseStore(context).open(source, "sample.db")!!.use { snapshot ->
             assertFalse(snapshot.tables.contains("excluded_view"))
+            assertFalse(snapshot.tables.contains("android_metadata"))
             val first = snapshot.page("people", 0)
             assertEquals(50, first.getJSONArray("rows").length())
             assertTrue(first.getBoolean("hasMore"))
